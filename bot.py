@@ -112,16 +112,21 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("===== OCR RESULT =====")
     print(text)
     print("======================")
-    
-# ==========================
-# SMART AI PARSER V2
-# ==========================
 
     merchant = "Tidak Dikenal"
     amount = 0.0
     category = "Lain-lain"
 
     lines = [line.strip() for line in text.split("\n") if line.strip()]
+
+    print("===== LINES =====")
+    for i, line in enumerate(lines):
+        print(i, ":", line)
+    print("=================")
+    
+# ==========================
+# SMART AI PARSER V2
+# ==========================
 
     for i, line in enumerate(lines):
 
