@@ -230,14 +230,14 @@ cursor.execute(
     
 conn.commit()
     
-    message = (
-        "✅ Resit berjaya disimpan\n\n"
-        f"🏪 Kedai:\n{merchant}\n\n"
-        f"💰 Jumlah:\nRM{amount:.2f}\n\n"
-        f"📂 Kategori:\n{category}"
-    )
+message = (
+    "✅ Resit berjaya disimpan\n\n"
+    f"🏪 Kedai:\n{merchant}\n\n"
+    f"💰 Jumlah:\nRM{amount:.2f}\n\n"
+    f"📂 Kategori:\n{category}"
+)
 
-    await update.message.reply_text(message)
+await update.message.reply_text(message)
 
 # ==========================
 # SENARAI BELANJA
