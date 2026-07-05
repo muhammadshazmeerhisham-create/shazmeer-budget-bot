@@ -80,7 +80,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    print("PHOTO FUNCTION CALLED")
+    print("PHOTO RECEIVED")
 
     if not update.message.photo:
         return
@@ -325,6 +325,7 @@ if __name__ == "__main__":
     ).start()
 
     print("SAFIA Started...")
+    print("Polling started...")
 
     app.run_polling(
         drop_pending_updates=True
