@@ -93,6 +93,10 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(text)
     print("======================")
 
+    await update.message.reply_text(
+    f"📄 Hasil OCR:\n\n{text}"
+    )
+
     cursor.execute(
         "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
         (
