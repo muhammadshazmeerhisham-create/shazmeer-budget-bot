@@ -19,7 +19,7 @@ from telegram.ext import (
 # CONFIG
 # ==========================
 
-BOT_TOKEN = os.getenv("8750781186:AAFS2bhkzgPcdCxjcxe8fSrtG9vDRzPtQSQ")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 OCR_API_KEY = os.getenv("OCR_API_KEY")
 
 # ==========================
@@ -259,7 +259,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # TELEGRAM BOT
 # ==========================
 
-app = Application.builder().token(8750781186:AAFS2bhkzgPcdCxjcxe8fSrtG9vDRzPtQSQ).build()
+app = Application.builder().token(BOT_TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("list", list_expenses))
