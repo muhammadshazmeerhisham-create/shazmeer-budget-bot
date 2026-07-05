@@ -2,15 +2,31 @@ import os
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-from telegram import Update
+from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 TOKEN = "8750781186:AAHGi2hhfkHJUMa2AzawQMka47dfRT1s-9w"
 
 # Command /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    keyboard = [
+        ["💰 Gaji 28hb", "💸 Gaji 7hb"],
+        ["🛒 Tambah Belanja", "📊 Lihat Baki"],
+        ["📈 Laporan", "⚙️ Tetapan"]
+    ]
+
+    reply_markup = ReplyKeyboardMarkup(
+        keyboard,
+        resize_keyboard=True
+    )
+
     await update.message.reply_text(
-        "🤖 Selamat datang ke SAFIA\n\nSmart AI Financial Assistant\n\nSedia membantu mengurus kewangan anda 💰"
+        "🤖 SAFIA\n"
+        "Smart AI Financial Assistant\n\n"
+        "Selamat datang!\n\n"
+        "Sila pilih menu di bawah 👇",
+        reply_markup=reply_markup
     )
 
 # Telegram Bot
