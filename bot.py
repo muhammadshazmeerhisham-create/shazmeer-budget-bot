@@ -72,8 +72,15 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             0,
             "Belum Dikenal"
         )
-    
+    )
+
     conn.commit()
+
+    await update.message.reply_text(
+        "✅ Gambar berjaya diterima!\n\n"
+        "📷 Resit telah disimpan.\n"
+        "💾 Rekod dimasukkan ke database."
+    )
 
         # Senarai rekod
 async def list_expenses(update: Update, context: ContextTypes.DEFAULT_TYPE):
