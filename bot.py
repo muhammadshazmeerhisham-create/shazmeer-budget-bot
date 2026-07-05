@@ -1,4 +1,4 @@
-import os
+2import os
 import sqlite3
 import threading
 import requests
@@ -127,13 +127,13 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # SAFIA SMART PARSER V3
 # ==========================
 
-merchant = "Tidak Dikenal"
-amount = 0.0
-category = "Lain-lain"
+   merchant = "Tidak Dikenal"
+   amount = 0.0
+   category = "Lain-lain"
 
 lines = [line.strip() for line in text.split("\n") if line.strip()]
 
-print("===== PARSED LINES =====")
+2print("===== PARSED LINES =====")
 for i, line in enumerate(lines):
     print(i, ":", line)
 print("========================")
@@ -182,7 +182,7 @@ for i, line in enumerate(lines):
 # Cari RMxx.xx seluruh OCR
 # -------------------------
 
-if amount == 0:
+    if amount == 0:
 
     m = re.search(r"RM\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
 
@@ -195,7 +195,7 @@ if amount == 0:
 # Cari nombor xx.xx
 # -------------------------
 
-if amount == 0:
+    if amount == 0:
 
     numbers = re.findall(r"\d[\d,]*\.\d{2}", text)
 
@@ -230,7 +230,7 @@ cursor.execute(
     
 conn.commit()
     
-message = (
+   message = (
     "✅ Resit berjaya disimpan\n\n"
     f"🏪 Kedai:\n{merchant}\n\n"
     f"💰 Jumlah:\nRM{amount:.2f}\n\n"
