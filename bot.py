@@ -67,7 +67,6 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     filename = f"receipt_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
     await file.download_to_drive(filename)
 
-    # Hantar gambar ke OCR.Space
     with open(filename, "rb") as f:
         response = requests.post(
             "https://api.ocr.space/parse/image",
@@ -85,6 +84,25 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("========================")
 
     text = ""
+
+    if result.get("ParsedResults"):
+        text = result["ParsedResults"][0]["ParsedText"]
+
+    merchant = "Tidak Dikenal"
+    amount = "RM0.00"
+
+    for line in text.split("\n"):
+        line = line.strip()
+
+        if line.startswith("RM"):
+            amount = line
+
+        if "Kedai" in line:
+            merchant = line
+
+    print("===== OCR RESULT =====")
+    print(text)
+    print("======================")
 
     cursor.execute(
         "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
