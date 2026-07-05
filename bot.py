@@ -80,6 +80,10 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     result = response.json()
 
+    print("===== API RESPONSE =====")
+print(result)
+print("========================")
+
     text = ""
 
     if result.get("ParsedResults"):
