@@ -127,26 +127,26 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if lower == "recipient" and i + 1 < len(lines):
             merchant = lines[i + 1]
-    
+        
         elif "kedai" in lower:
             merchant = line
-    
+        
         elif lower == "amount" and i + 1 < len(lines):
-    
+        
             value = lines[i + 1]
-    
-            match = re.search(r"([\d,]+\.\d{2})", value)
-    
-        if match:
-            amount = float(match.group(1).replace(",", ""))
-    
+        
+            amount_match = re.search(r"([\d,]+\.\d{2})", value)
+        
+            if amount_match:
+                amount = float(amount_match.group(1).replace(",", ""))
+        
         else:
-    
-            match = re.search(r"RM\s*([\d,]+\.\d{2})", line)
-    
-        if match:
-            amount = float(match.group(1).replace(",", ""))
-
+        
+            amount_match = re.search(r"RM\s*([\d,]+\.\d{2})", line)
+        
+            if amount_match:
+                amount = float(amount_match.group(1).replace(",", ""))
+            
 # Simpan ke database
     cursor.execute(
             """
