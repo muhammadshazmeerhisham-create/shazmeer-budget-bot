@@ -1,7 +1,8 @@
 import os
 import threading
 import sqlite3
-import easyocr
+import pytesseract
+from PIL import Image
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
@@ -34,9 +35,6 @@ CREATE TABLE IF NOT EXISTS expenses (
 """)
 
 conn.commit()
-
-# OCR Reader
-reader = easyocr.Reader(['en'])
 
 # Command /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
