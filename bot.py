@@ -122,11 +122,11 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         merchant,
         float(amount.replace("RM", "").replace(",", "")),
-        "Belum Dikenal"
+        "Belanja"
     )
 )
 
-    conn.commit()
+conn.commit()
 
     await update.message.reply_text(
         "✅ Gambar berjaya diterima!\n\n"
