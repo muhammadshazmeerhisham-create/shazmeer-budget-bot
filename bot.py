@@ -10,7 +10,7 @@ TOKEN = "8750781186:AAHGi2hhfkHJUMa2AzawQMka47dfRT1s-9w"
 # Command /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        ""🤖 Selamat datang ke SAFIA\n\nSmart AI Financial Assistant\n\nSedia membantu mengurus kewangan anda 💰"
+        "🤖 Selamat datang ke SAFIA\n\nSmart AI Financial Assistant\n\nSedia membantu mengurus kewangan anda 💰"
     )
 
 # Telegram Bot
