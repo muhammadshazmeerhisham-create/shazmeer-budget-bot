@@ -110,27 +110,51 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("===== OCR RESULT =====")
     print(text)
     print("======================")
-    # ==========================
-    # AI PARSER
-    # ==========================
+   # ==========================
+# SMART AI PARSER V2
+# ==========================
 
-    merchant = "Tidak Dikenal"
-    amount = 0.0
-    category = "Lain-lain"
+merchant = "Tidak Dikenal"
+amount = 0.0
+category = "Lain-lain"
 
-    for line in text.split("\n"):
+lines = [line.strip() for line in text.split("\n") if line.strip()]
 
-        line = line.strip()
+for i, line in enumerate(lines):
 
-        # Cari jumlah RM
-        match = re.search(r"RM\s*([\d,]+\.\d{2})", line)
+    lower = line.lower()
+
+    # --------------------------
+    # GXBank / DuitNow
+    # Recipient
+    # --------------------------
+    if lower == "recipient" and i + 1 < len(lines):
+        merchant = lines[i + 1]
+
+    # --------------------------
+    # OCR biasa
+    # --------------------------
+    elif "kedai" in lower:
+        merchant = line
+
+    # --------------------------
+    # Amount
+    # --------------------------
+    elif lower == "amount" and i + 1 < len(lines):
+
+        value = lines[i + 1]
+
+        match = re.search(r"([\d,]+\.\d{2})", value)
 
         if match:
             amount = float(match.group(1).replace(",", ""))
 
-        # Cari nama kedai
-        if "Kedai" in line:
-            merchant = line
+    else:
+
+        match = re.search(r"RM\s*([\d,]+\.\d{2})", line)
+
+        if match:
+            amount = float(match.group(1).replace(",", ""))
 
     # Simpan ke database
     cursor.execute(
