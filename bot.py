@@ -86,24 +86,17 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = ""
 
-    if result.get("ParsedResults"):
-        text = result["ParsedResults"][0]["ParsedText"]
+    cursor.execute(
+        "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
+        (
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            merchant,
+            float(amount.replace("RM", "").replace(",", "")),
+            "Belanja"
+        )
+    )
 
-    merchant = "Tidak Dikenal"
-    amount = "RM0.00"
-
-    for line in text.split("\n"):
-        line = line.strip()
-
-        if line.startswith("RM"):
-            amount = line
-
-        if "Kedai" in line:
-            merchant = line
-
-    print("===== OCR RESULT =====")
-    print(text)
-    print("======================")
+    conn.commit()
 
     await update.message.reply_text(
         f"""✅ Resit berjaya dibaca
@@ -113,25 +106,8 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 💰 Jumlah:
 {amount}
-"""
-    )
 
-    cursor.execute(
-    "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
-    (
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        merchant,
-        float(amount.replace("RM", "").replace(",", "")),
-        "Belanja"
-    )
-)
-
-conn.commit()
-
-    await update.message.reply_text(
-        "✅ Gambar berjaya diterima!\n\n"
-        "🔍 OCR sedang membaca resit...\n"
-        "💾 Rekod dimasukkan ke database."
+💾 Rekod berjaya disimpan ke database."""
     )
 
 # Senarai rekod
