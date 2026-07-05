@@ -135,8 +135,8 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     print("===== PARSED LINES =====")
     for i, line in enumerate(lines):
-    print(i, ":", line)
-    print("========================")
+       print(i, ":", line)
+       print("========================")
 
 
 # -------------------------
