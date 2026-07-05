@@ -5,7 +5,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-TOKEN = "TOKEN_BOT_AWAK"
+TOKEN = "8750781186:AAHGi2hhfkHJUMa2AzawQMka47dfRT1s-9w"
 
 # Command /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
