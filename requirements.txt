@@ -1,6 +1,4 @@
 python-telegram-bot
-pillow
-pytesseract
-opencv-python-headless
-numpy
 requests
+pillow
+numpy
