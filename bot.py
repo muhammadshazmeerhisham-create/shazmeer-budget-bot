@@ -15,7 +15,7 @@ from telegram.ext import (
     filters,
 )
 
-TOKEN = "8750781186:AAHGi2hhfkHJUMa2AzawQMka47dfRT1s-9w"
+TOKEN = "8750781186:AAFS2bhkzgPcdCxjcxe8fSrtG9vDRzPtQSQ"
 
 OCR_API_KEY = os.getenv("OCR_API_KEY")
 
