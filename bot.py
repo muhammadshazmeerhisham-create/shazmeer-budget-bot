@@ -93,28 +93,27 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     amount = "RM0.00"
 
     for line in text.split("\n"):
-    line = line.strip()
+        line = line.strip()
 
-    if line.startswith("RM"):
-        amount = line
+        if line.startswith("RM"):
+            amount = line
 
-    if "Kedai" in line:
-        merchant = line
+        if "Kedai" in line:
+            merchant = line
 
     print("===== OCR RESULT =====")
     print(text)
     print("======================")
 
-await update.message.reply_text(
-    f"""
-    ✅ Resit berjaya dibaca
+    await update.message.reply_text(
+        f"""✅ Resit berjaya dibaca
 
-    🏪 Kedai:
-    {merchant}
+🏪 Kedai:
+{merchant}
 
-    💰 Jumlah:
-    {amount}
-    """
+💰 Jumlah:
+{amount}
+"""
     )
 
     cursor.execute(
