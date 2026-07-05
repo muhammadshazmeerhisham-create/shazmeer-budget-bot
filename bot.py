@@ -103,6 +103,12 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     result = response.json()
+    
+    print(result)
+    print("OCR Exit Code:", result.get("OCRExitCode"))
+    print("IsErrored:", result.get("IsErroredOnProcessing"))
+    print("Error:", result.get("ErrorMessage"))
+    
 
     text = ""
 
@@ -146,6 +152,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
             if amount_match:
                 amount = float(amount_match.group(1).replace(",", ""))
+                print("AMOUNT DETECTED =", amount)
         
         else:
         
@@ -153,6 +160,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
             if amount_match:
                 amount = float(amount_match.group(1).replace(",", ""))
+                print("AMOUNT DETECTED =", amount)
             
 # Simpan ke database
     cursor.execute(
