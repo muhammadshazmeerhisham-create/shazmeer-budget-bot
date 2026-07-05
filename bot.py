@@ -1,8 +1,8 @@
 import os
 import threading
 import sqlite3
-import pytesseract
-from PIL import Image
+import requests
+
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
@@ -16,6 +16,8 @@ from telegram.ext import (
 )
 
 TOKEN = "8750781186:AAHGi2hhfkHJUMa2AzawQMka47dfRT1s-9w"
+
+OCR_API_KEY = os.getenv("OCR_API_KEY")
 
 # ==========================
 # DATABASE SQLITE
@@ -65,6 +67,28 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     filename = f"receipt_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
     await file.download_to_drive(filename)
 
+    # Hantar gambar ke OCR.Space
+    with open(filename, "rb") as f:
+        response = requests.post(
+            "https://api.ocr.space/parse/image",
+            files={"filename": f},
+            data={
+                "apikey": OCR_API_KEY,
+                "language": "eng"
+            }
+        )
+
+    result = response.json()
+
+    text = ""
+
+    if result.get("ParsedResults"):
+        text = result["ParsedResults"][0]["ParsedText"]
+
+    print("===== OCR RESULT =====")
+    print(text)
+    print("======================")
+
     cursor.execute(
         "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
         (
@@ -79,11 +103,12 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         "✅ Gambar berjaya diterima!\n\n"
-        "📷 Resit telah disimpan.\n"
+        "🔍 OCR sedang membaca resit...\n"
         "💾 Rekod dimasukkan ke database."
     )
 
-        # Senarai rekod
+
+# Senarai rekod
 async def list_expenses(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     cursor.execute(
@@ -108,12 +133,6 @@ async def list_expenses(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     await update.message.reply_text(text)
-
-    await update.message.reply_text(
-        "✅ Gambar berjaya diterima!\n\n"
-        "📷 Resit telah disimpan.\n"
-        "💾 Rekod dimasukkan ke database SAFIA."
-    )
 
 # Telegram Bot
 app = Application.builder().token(TOKEN).build()
