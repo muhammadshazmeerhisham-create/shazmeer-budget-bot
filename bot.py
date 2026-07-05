@@ -127,16 +127,16 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # SAFIA SMART PARSER V3
 # ==========================
 
-   merchant = "Tidak Dikenal"
-   amount = 0.0
-   category = "Lain-lain"
+    merchant = "Tidak Dikenal"
+    amount = 0.0
+    category = "Lain-lain"
 
-lines = [line.strip() for line in text.split("\n") if line.strip()]
+    lines = [line.strip() for line in text.split("\n") if line.strip()]
 
-2print("===== PARSED LINES =====")
-for i, line in enumerate(lines):
+    print("===== PARSED LINES =====")
+    for i, line in enumerate(lines):
     print(i, ":", line)
-print("========================")
+    print("========================")
 
 
 # -------------------------
