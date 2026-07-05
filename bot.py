@@ -123,7 +123,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(text)
     print("======================")
 
-    # ==========================
+# ==========================
 # SAFIA SMART PARSER V3
 # ==========================
 
@@ -226,7 +226,7 @@ print("Amount   :", amount)
                 category,
                 ""
             )
-        )
+    )
     
     conn.commit()
     
