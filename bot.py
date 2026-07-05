@@ -117,14 +117,14 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     cursor.execute(
-        "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
-        (
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "Belum Dikenal",
-            0,
-            "Belum Dikenal"
-        )
+    "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
+    (
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        merchant,
+        float(amount.replace("RM", "").replace(",", "")),
+        "Belum Dikenal"
     )
+)
 
     conn.commit()
 
