@@ -3,7 +3,13 @@ import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
 
 TOKEN = "8750781186:AAHGi2hhfkHJUMa2AzawQMka47dfRT1s-9w"
 
@@ -29,9 +35,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
+# Terima gambar resit
+async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    file = await update.message.photo[-1].get_file()
+
+    await file.download_to_drive("receipt.jpg")
+
+    await update.message.reply_text(
+        "📷 Resit diterima!\n\n"
+        "Sedang membaca maklumat..."
+    )
+
 # Telegram Bot
 app = Application.builder().token(TOKEN).build()
+
 app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.PHOTO, photo))
 
 # Web server untuk Render
 class Handler(BaseHTTPRequestHandler):
