@@ -110,7 +110,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("===== OCR RESULT =====")
     print(text)
     print("======================")
-   # ==========================
+# ==========================
 # SMART AI PARSER V2
 # ==========================
 
@@ -124,22 +124,12 @@ for i, line in enumerate(lines):
 
     lower = line.lower()
 
-    # --------------------------
-    # GXBank / DuitNow
-    # Recipient
-    # --------------------------
     if lower == "recipient" and i + 1 < len(lines):
         merchant = lines[i + 1]
 
-    # --------------------------
-    # OCR biasa
-    # --------------------------
     elif "kedai" in lower:
         merchant = line
 
-    # --------------------------
-    # Amount
-    # --------------------------
     elif lower == "amount" and i + 1 < len(lines):
 
         value = lines[i + 1]
@@ -179,19 +169,14 @@ for i, line in enumerate(lines):
 
     conn.commit()
 
-    await update.message.reply_text(
-        f"""✅ Resit berjaya disimpan
+    message = (
+    "✅ Resit berjaya disimpan\n\n"
+    f"🏪 Kedai:\n{merchant}\n\n"
+    f"💰 Jumlah:\nRM{amount:.2f}\n\n"
+    f"📂 Kategori:\n{category}"
+)
 
-🏪 Kedai:
-{merchant}
-
-💰 Jumlah:
-RM{amount:.2f}
-
-📂 Kategori:
-{category}
-"""
-    )
+await update.message.reply_text(message)
 # ==========================
 # SENARAI BELANJA
 # ==========================
