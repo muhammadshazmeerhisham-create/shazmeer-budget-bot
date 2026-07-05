@@ -127,28 +127,28 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if lower == "recipient" and i + 1 < len(lines):
             merchant = lines[i + 1]
-
+    
         elif "kedai" in lower:
             merchant = line
-
+    
         elif lower == "amount" and i + 1 < len(lines):
-
+    
             value = lines[i + 1]
-
+    
             match = re.search(r"([\d,]+\.\d{2})", value)
-
-            if match:
-                amount = float(match.group(1).replace(",", ""))
-
+    
+        if match:
+            amount = float(match.group(1).replace(",", ""))
+    
         else:
-
+    
             match = re.search(r"RM\s*([\d,]+\.\d{2})", line)
+    
+        if match:
+            amount = float(match.group(1).replace(",", ""))
 
-            if match:
-                amount = float(match.group(1).replace(",", ""))
-
-        # Simpan ke database
-        cursor.execute(
+# Simpan ke database
+    cursor.execute(
             """
             INSERT INTO expenses(
                 date,
@@ -167,9 +167,9 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ""
             )
         )
-
+    
         conn.commit()
-
+    
         message = (
         "✅ Resit berjaya disimpan\n\n"
         f"🏪 Kedai:\n{merchant}\n\n"
@@ -177,7 +177,8 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📂 Kategori:\n{category}"
     )
 
-        await update.message.reply_text(message)
+await update.message.reply_text(message)
+
 # ==========================
 # SENARAI BELANJA
 # ==========================
@@ -239,6 +240,7 @@ async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
 RM{total:.2f}
 """
     )
+
 # ==========================
 # BUTTON MENU
 # ==========================
