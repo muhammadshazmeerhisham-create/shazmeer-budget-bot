@@ -14,4 +14,4 @@ app.add_handler(CommandHandler("start", start))
 
 if __name__ == "__main__":
     print("Bot sedang berjalan...")
-    app.run_polling(close_loop=False)
+    app.run_polling()
