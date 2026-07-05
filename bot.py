@@ -1,5 +1,6 @@
 import os
 import threading
+import sqlite3
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from telegram import Update, ReplyKeyboardMarkup
@@ -12,6 +13,25 @@ from telegram.ext import (
 )
 
 TOKEN = "8750781186:AAHGi2hhfkHJUMa2AzawQMka47dfRT1s-9w"
+
+# ==========================
+# DATABASE SQLITE
+# ==========================
+
+conn = sqlite3.connect("safia.db", check_same_thread=False)
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS expenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT,
+    merchant TEXT,
+    amount REAL,
+    category TEXT
+)
+""")
+
+conn.commit()
 
 # Command /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
