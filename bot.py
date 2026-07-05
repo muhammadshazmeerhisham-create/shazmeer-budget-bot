@@ -123,48 +123,89 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(text)
     print("======================")
 
-    merchant = "Tidak Dikenal"
-    amount = 0.0
-    category = "Lain-lain"
-
-    lines = [line.strip() for line in text.split("\n") if line.strip()]
-
-    print("===== LINES =====")
-    for i, line in enumerate(lines):
-        print(i, ":", line)
-    print("=================")
-    
-# ==========================
-# SMART AI PARSER V2
+    # ==========================
+# SAFIA SMART PARSER V3
 # ==========================
 
-    for i, line in enumerate(lines):
+merchant = "Tidak Dikenal"
+amount = 0.0
+category = "Lain-lain"
 
-        lower = line.lower()
+lines = [line.strip() for line in text.split("\n") if line.strip()]
 
-        if lower == "recipient" and i + 1 < len(lines):
-            merchant = lines[i + 1]
-        
-        elif "kedai" in lower:
+print("===== PARSED LINES =====")
+for i, line in enumerate(lines):
+    print(i, ":", line)
+print("========================")
+
+
+# -------------------------
+# MERCHANT
+# -------------------------
+
+for i, line in enumerate(lines):
+
+    lower = line.lower()
+
+    if lower == "recipient" and i + 1 < len(lines):
+        merchant = lines[i + 1]
+        break
+
+if merchant == "Tidak Dikenal":
+
+    for line in lines:
+        if "kedai" in line.lower():
             merchant = line
-        
-        elif lower == "amount" and i + 1 < len(lines):
-        
-            value = lines[i + 1]
-        
-            amount_match = re.search(r"([\d,]+\.\d{2})", value)
-        
-            if amount_match:
-                amount = float(amount_match.group(1).replace(",", ""))
-                print("AMOUNT DETECTED =", amount)
-        
-        else:
-        
-            amount_match = re.search(r"RM\s*([\d,]+\.\d{2})", line)
-        
-            if amount_match:
-                amount = float(amount_match.group(1).replace(",", ""))
-                print("AMOUNT DETECTED =", amount)
+            break
+
+
+# -------------------------
+# AMOUNT (Priority 1)
+# selepas Amount
+# -------------------------
+
+for i, line in enumerate(lines):
+
+    if line.lower() == "amount" and i + 1 < len(lines):
+
+        next_line = lines[i + 1]
+
+        m = re.search(r"([\d,]+\.\d{2})", next_line)
+
+        if m:
+            amount = float(m.group(1).replace(",", ""))
+            break
+
+
+# -------------------------
+# Priority 2
+# Cari RMxx.xx seluruh OCR
+# -------------------------
+
+if amount == 0:
+
+    m = re.search(r"RM\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
+
+    if m:
+        amount = float(m.group(1).replace(",", ""))
+
+
+# -------------------------
+# Priority 3
+# Cari nombor xx.xx
+# -------------------------
+
+if amount == 0:
+
+    numbers = re.findall(r"\d[\d,]*\.\d{2}", text)
+
+    if numbers:
+
+        amount = float(numbers[0].replace(",", ""))
+
+
+print("Merchant :", merchant)
+print("Amount   :", amount)
             
 # Simpan ke database
     cursor.execute(
