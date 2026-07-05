@@ -208,27 +208,27 @@ print("Merchant :", merchant)
 print("Amount   :", amount)
             
 # Simpan ke database
-    cursor.execute(
-            """
-            INSERT INTO expenses(
-                date,
-                merchant,
-                amount,
-                category,
-                note
-            )
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                merchant,
-                amount,
-                category,
-                ""
-            )
+cursor.execute(
+    """
+    INSERT INTO expenses(
+        date,
+        merchant,
+        amount,
+        category,
+        note
     )
+    VALUES (?, ?, ?, ?, ?)
+    """,
+    (
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        merchant,
+        amount,
+        category,
+        ""
+    )
+)
     
-    conn.commit()
+conn.commit()
     
     message = (
         "✅ Resit berjaya disimpan\n\n"
