@@ -1,1 +1,5 @@
 python-telegram-bot==22.2
+easyocr
+opencv-python-headless
+numpy
+Pillow
