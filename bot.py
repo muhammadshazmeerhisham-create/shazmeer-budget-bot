@@ -80,26 +80,26 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     result = response.json()
 
-print("===== API RESPONSE =====")
-print(result)
-print("========================")
+    print("===== API RESPONSE =====")
+    print(result)
+    print("========================")
 
-text = ""
+    text = ""
 
-if result.get("ParsedResults"):
+    if result.get("ParsedResults"):
         text = result["ParsedResults"][0]["ParsedText"]
 
-print("===== OCR RESULT =====")
-print(text)
-print("======================")
+    print("===== OCR RESULT =====")
+    print(text)
+    print("======================")
 
-cursor.execute(
-    "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
+    cursor.execute(
+        "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
         (
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "Belum Dikenal",
-         0,
-        "Belum Dikenal"
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Belum Dikenal",
+            0,
+            "Belum Dikenal"
         )
     )
 
@@ -110,7 +110,6 @@ cursor.execute(
         "🔍 OCR sedang membaca resit...\n"
         "💾 Rekod dimasukkan ke database."
     )
-
 
 # Senarai rekod
 async def list_expenses(update: Update, context: ContextTypes.DEFAULT_TYPE):
