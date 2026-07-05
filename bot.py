@@ -168,7 +168,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         )
     
-        conn.commit()
+conn.commit()
     
         message = (
         "✅ Resit berjaya disimpan\n\n"
