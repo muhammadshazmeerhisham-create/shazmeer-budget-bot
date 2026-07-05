@@ -93,13 +93,13 @@ print("===== OCR RESULT =====")
 print(text)
 print("======================")
 
-    cursor.execute(
-        "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
+cursor.execute(
+    "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
         (
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "Belum Dikenal",
-            0,
-            "Belum Dikenal"
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "Belum Dikenal",
+         0,
+        "Belum Dikenal"
         )
     )
 
