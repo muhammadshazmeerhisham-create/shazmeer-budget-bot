@@ -20,7 +20,7 @@ from telegram.ext import (
 # CONFIG
 # ==========================
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv("8750781186:AAFS2bhkzgPcdCxjcxe8fSrtG9vDRzPtQSQ")
 OCR_API_KEY = os.getenv("OCR_API_KEY")
 
 # ==========================
