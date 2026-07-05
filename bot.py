@@ -1,8 +1,8 @@
 import os
+import easyocr
 import threading
 import sqlite3
 from datetime import datetime
-import sqlite3
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from telegram import Update, ReplyKeyboardMarkup
@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS expenses (
 """)
 
 conn.commit()
+
+# OCR Reader
+reader = easyocr.Reader(['en'])
 
 # Command /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
