@@ -67,6 +67,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     filename = f"receipt_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
     await file.download_to_drive(filename)
 
+    # Hantar gambar ke OCR.Space
     with open(filename, "rb") as f:
         response = requests.post(
             "https://api.ocr.space/parse/image",
@@ -104,27 +105,30 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(text)
     print("======================")
 
+    # Bersihkan nilai amount
+    clean_amount = (
+        amount.replace("RM", "")
+              .replace(",", "")
+              .replace("'", "")
+              .strip()
+    )
+
+    try:
+        amount_value = float(clean_amount)
+    except ValueError:
+        amount_value = 0.0
+
+    # Simpan ke database
     cursor.execute(
         "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
         (
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             merchant,
-            clean_amount = (
-                amount.replace("RM", "")
-                      .replace(",", "")
-                      .replace("'", "")
-                      .strip()
+            amount_value,
+            "Belanja"
+        )
     )
 
-cursor.execute(
-    "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
-    (
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        merchant,
-        float(clean_amount),
-        "Belanja"
-    )
-)
     conn.commit()
 
     await update.message.reply_text(
@@ -134,11 +138,10 @@ cursor.execute(
 {merchant}
 
 💰 Jumlah:
-{amount}
+RM{amount_value:.2f}
 
 💾 Rekod berjaya disimpan ke database."""
     )
-
 # Senarai rekod
 async def list_expenses(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
