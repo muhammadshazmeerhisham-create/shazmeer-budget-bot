@@ -1,5 +1,5 @@
-python-telegram-bot==22.2
-easyocr
+python-telegram-bot
+pillow
+pytesseract
 opencv-python-headless
 numpy
-Pillow
