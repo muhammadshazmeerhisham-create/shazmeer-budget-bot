@@ -89,9 +89,9 @@ text = ""
 if result.get("ParsedResults"):
         text = result["ParsedResults"][0]["ParsedText"]
 
-    print("===== OCR RESULT =====")
-    print(text)
-    print("======================")
+print("===== OCR RESULT =====")
+print(text)
+print("======================")
 
     cursor.execute(
         "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
