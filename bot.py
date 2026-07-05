@@ -81,6 +81,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     print("PHOTO RECEIVED")
+    print("Downloading image...")
 
     if not update.message.photo:
         return
@@ -90,6 +91,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     filename = f"receipt_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
 
     await file.download_to_drive(filename)
+    print("Image downloaded")
 
     with open(filename, "rb") as f:
 
@@ -101,10 +103,12 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "language": "eng"
             }
         )
+        
+    print("OCR API status =", response.status_code)
 
     result = response.json()
-    
     print(result)
+    
     print("OCR Exit Code:", result.get("OCRExitCode"))
     print("IsErrored:", result.get("IsErroredOnProcessing"))
     print("Error:", result.get("ErrorMessage"))
