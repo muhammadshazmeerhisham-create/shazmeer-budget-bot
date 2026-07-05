@@ -1,8 +1,7 @@
-import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-TOKEN = os.getenv("TOKEN", "8750781186:AAHGi2hhfkHJUMa2AzawQMka47dfRT1s-9w")
+TOKEN = "8750781186:AAHGi2hhfkHJUMa2AzawQMka47dfRT1s-9w"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -10,14 +9,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Bot sedang beroperasi. ✅"
     )
 
-async def main():
-    app = Application.builder().token(TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-
-    print("Bot sedang berjalan...")
-    await app.run_polling()
+app = Application.builder().token(TOKEN).build()
+app.add_handler(CommandHandler("start", start))
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    print("Bot sedang berjalan...")
+    app.run_polling(close_loop=False)
