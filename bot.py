@@ -80,6 +80,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    print("PHOTO FUNCTION CALLED")
+
     if not update.message.photo:
         return
 
