@@ -109,11 +109,22 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         (
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             merchant,
-            float(amount.replace("RM", "").replace(",", "")),
-            "Belanja"
-        )
-    )
+            clean_amount = (
+                amount.replace("RM", "")
+                      .replace(",", "")
+                      .replace("'", "")
+                      .strip()
+            )
 
+cursor.execute(
+    "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
+    (
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        merchant,
+        float(clean_amount),
+        "Belanja"
+    )
+)
     conn.commit()
 
     await update.message.reply_text(
@@ -144,13 +155,14 @@ async def list_expenses(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = "📒 Senarai Perbelanjaan\n\n"
 
     for row in rows:
-        text += (
-            f"🆔 {row[0]}\n"
-            f"📅 {row[1]}\n"
-            f"🏪 {row[2]}\n"
-            f"💰 RM{row[3]:.2f}\n"
-            f"📂 {row[4]}\n\n"
-        )
+    text += (
+        f"🆔 ID: {row[0]}\n"
+        f"📅 Tarikh: {row[1]}\n"
+        f"🏪 Kedai: {row[2]}\n"
+        f"💰 Jumlah: RM{row[3]:.2f}\n"
+        f"📂 Kategori: {row[4]}\n"
+        "────────────────\n"
+    )
 
     await update.message.reply_text(text)
 
