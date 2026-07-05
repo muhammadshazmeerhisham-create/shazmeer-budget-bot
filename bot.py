@@ -237,7 +237,7 @@ message = (
     f"📂 Kategori:\n{category}"
 )
 
-    await update.message.reply_text(message)
+await update.message.reply_text(message)
 
 # ==========================
 # SENARAI BELANJA
