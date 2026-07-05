@@ -1,7 +1,7 @@
 import os
-import easyocr
 import threading
 import sqlite3
+import easyocr
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
