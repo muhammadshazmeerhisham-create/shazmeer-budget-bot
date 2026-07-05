@@ -113,7 +113,6 @@ async def list_expenses(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📷 Resit telah disimpan.\n"
         "💾 Rekod dimasukkan ke database SAFIA."
     )
-    )
 
 # Telegram Bot
 app = Application.builder().token(TOKEN).build()
