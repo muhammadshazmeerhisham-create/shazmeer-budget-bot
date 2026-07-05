@@ -114,7 +114,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                       .replace(",", "")
                       .replace("'", "")
                       .strip()
-            )
+    )
 
 cursor.execute(
     "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
