@@ -110,73 +110,74 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("===== OCR RESULT =====")
     print(text)
     print("======================")
+    
 # ==========================
 # SMART AI PARSER V2
 # ==========================
 
-merchant = "Tidak Dikenal"
-amount = 0.0
-category = "Lain-lain"
+    merchant = "Tidak Dikenal"
+    amount = 0.0
+    category = "Lain-lain"
 
-lines = [line.strip() for line in text.split("\n") if line.strip()]
+    lines = [line.strip() for line in text.split("\n") if line.strip()]
 
-for i, line in enumerate(lines):
+    for i, line in enumerate(lines):
 
-    lower = line.lower()
+        lower = line.lower()
 
-    if lower == "recipient" and i + 1 < len(lines):
-        merchant = lines[i + 1]
+        if lower == "recipient" and i + 1 < len(lines):
+            merchant = lines[i + 1]
 
-    elif "kedai" in lower:
-        merchant = line
+        elif "kedai" in lower:
+            merchant = line
 
-    elif lower == "amount" and i + 1 < len(lines):
+        elif lower == "amount" and i + 1 < len(lines):
 
-        value = lines[i + 1]
+            value = lines[i + 1]
 
-        match = re.search(r"([\d,]+\.\d{2})", value)
+            match = re.search(r"([\d,]+\.\d{2})", value)
 
-        if match:
-            amount = float(match.group(1).replace(",", ""))
+            if match:
+                amount = float(match.group(1).replace(",", ""))
 
-    else:
+        else:
 
-        match = re.search(r"RM\s*([\d,]+\.\d{2})", line)
+            match = re.search(r"RM\s*([\d,]+\.\d{2})", line)
 
-        if match:
-            amount = float(match.group(1).replace(",", ""))
+            if match:
+                amount = float(match.group(1).replace(",", ""))
 
-    # Simpan ke database
-    cursor.execute(
-        """
-        INSERT INTO expenses(
-            date,
-            merchant,
-            amount,
-            category,
-            note
+        # Simpan ke database
+        cursor.execute(
+            """
+            INSERT INTO expenses(
+                date,
+                merchant,
+                amount,
+                category,
+                note
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                merchant,
+                amount,
+                category,
+                ""
+            )
         )
-        VALUES (?, ?, ?, ?, ?)
-        """,
-        (
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            merchant,
-            amount,
-            category,
-            ""
-        )
+
+        conn.commit()
+
+        message = (
+        "✅ Resit berjaya disimpan\n\n"
+        f"🏪 Kedai:\n{merchant}\n\n"
+        f"💰 Jumlah:\nRM{amount:.2f}\n\n"
+        f"📂 Kategori:\n{category}"
     )
 
-    conn.commit()
-
-    message = (
-    "✅ Resit berjaya disimpan\n\n"
-    f"🏪 Kedai:\n{merchant}\n\n"
-    f"💰 Jumlah:\nRM{amount:.2f}\n\n"
-    f"📂 Kategori:\n{category}"
-)
-
-await update.message.reply_text(message)
+        await update.message.reply_text(message)
 # ==========================
 # SENARAI BELANJA
 # ==========================
