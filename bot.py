@@ -2,6 +2,7 @@ import os
 import threading
 import sqlite3
 import requests
+import re
 
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -15,36 +16,31 @@ from telegram.ext import (
     filters,
 )
 
-TOKEN = "8750781186:AAFS2bhkzgPcdCxjcxe8fSrtG9vDRzPtQSQ"
-
+TOKEN = os.getenv("BOT_TOKEN")
 OCR_API_KEY = os.getenv("OCR_API_KEY")
-
-# ==========================
-# DATABASE SQLITE
-# ==========================
 
 conn = sqlite3.connect("safia.db", check_same_thread=False)
 cursor = conn.cursor()
 
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS expenses (
+CREATE TABLE IF NOT EXISTS expenses(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT,
     merchant TEXT,
     amount REAL,
-    category TEXT
+    category TEXT,
+    note TEXT
 )
 """)
 
 conn.commit()
 
-# Command /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
-        ["💰 Gaji 28hb", "💸 Gaji 7hb"],
-        ["🛒 Tambah Belanja", "📊 Lihat Baki"],
-        ["📈 Laporan", "⚙️ Tetapan"]
+        ["📷 Scan Resit"],
+        ["📒 Senarai", "📊 Laporan"],
+        ["💰 Baki", "⚙️ Tetapan"]
     ]
 
     reply_markup = ReplyKeyboardMarkup(
@@ -55,20 +51,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🤖 SAFIA\n"
         "Smart AI Financial Assistant\n\n"
-        "Selamat datang!\n\n"
-        "Sila pilih menu di bawah 👇",
+        "Selamat datang.\n"
+        "Sila pilih menu di bawah.",
         reply_markup=reply_markup
     )
 
-# Terima gambar resit
 async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    # Download gambar
     file = await update.message.photo[-1].get_file()
 
     filename = f"receipt_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+
     await file.download_to_drive(filename)
 
-    # Hantar gambar ke OCR.Space
+    # OCR.Space
     with open(filename, "rb") as f:
+
         response = requests.post(
             "https://api.ocr.space/parse/image",
             files={"filename": f},
@@ -80,74 +81,123 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     result = response.json()
 
-    print("===== API RESPONSE =====")
-    print(result)
-    print("========================")
-
     text = ""
 
     if result.get("ParsedResults"):
         text = result["ParsedResults"][0]["ParsedText"]
 
-    merchant = "Tidak Dikenal"
-    amount = "RM0.00"
-
-    for line in text.split("\n"):
-        line = line.strip()
-
-        if line.startswith("RM"):
-            amount = line
-
-        if "Kedai" in line:
-            merchant = line
-
-    print("===== OCR RESULT =====")
     print(text)
-    print("======================")
 
-    # Bersihkan nilai amount
-    clean_amount = (
-        amount.replace("RM", "")
-              .replace(",", "")
-              .replace("'", "")
-              .strip()
-    )
+text = ""
 
-    try:
-        amount_value = float(clean_amount)
-    except ValueError:
-        amount_value = 0.0
+if result.get("ParsedResults"):
+    text = result["ParsedResults"][0]["ParsedText"]
 
-    # Simpan ke database
-    cursor.execute(
-        "INSERT INTO expenses(date, merchant, amount, category) VALUES (?, ?, ?, ?)",
-        (
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            merchant,
-            amount_value,
-            "Belanja"
+print(text)
+
+# ==========================
+# AI Receipt Parser
+# ==========================
+
+merchant = "Tidak Dikenal"
+amount = 0.0
+category = "Lain-lain"
+
+merchant_upper = merchant.upper()
+
+if "PETRONAS" in merchant_upper or "SHELL" in merchant_upper or "BHP" in merchant_upper:
+    category = "⛽ Minyak"
+
+elif "KFC" in merchant_upper or "MCD" in merchant_upper or "MCDONALD" in merchant_upper:
+    category = "🍔 Makanan"
+
+elif "LOTUS" in merchant_upper or "MYDIN" in merchant_upper or "ECONSAVE" in merchant_upper:
+    category = "🛒 Barang Dapur"
+
+elif "SHOPEE" in merchant_upper or "LAZADA" in merchant_upper:
+    category = "📦 Shopping"
+
+elif "TNB" in merchant_upper:
+    category = "💡 Bil Elektrik"
+
+elif "TM" in merchant_upper or "UNIFI" in merchant_upper:
+    category = "🌐 Internet"
+
+elif "GXBANK" in merchant_upper:
+    category = "🏦 Transfer"
+lines = text.split("\n")
+
+for line in lines:
+
+    line = line.strip()
+
+    # Cari jumlah RM
+    match = re.search(r'RM\s*([\d,]+\.\d{2})', line)
+
+    if match:
+        amount = float(
+            match.group(1).replace(",", "")
         )
+
+    # Cari nama kedai
+    if "Kedai" in line:
+        merchant = line
+
+print("Merchant :", merchant)
+print("Amount   :", amount)
+
+# ==========================
+# SIMPAN DATABASE
+# ==========================
+
+cursor.execute(
+    """
+    INSERT INTO expenses(
+        date,
+        merchant,
+        amount,
+        category,
+        note
     )
+    VALUES (?, ?, ?, ?, ?)
+    """,
+    (
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        merchant,
+        amount,
+        category,
+        ""
+    )
+)
 
-    conn.commit()
+conn.commit()
 
-    await update.message.reply_text(
-        f"""✅ Resit berjaya dibaca
+await update.message.reply_text(
+    f"""✅ Resit berjaya disimpan
 
-🏪 Kedai:
+🏪 Kedai
 {merchant}
 
-💰 Jumlah:
-RM{amount_value:.2f}
+💰 Jumlah
+RM{amount:.2f}
 
-💾 Rekod berjaya disimpan ke database."""
-    )
-# Senarai rekod
+📂 Kategori
+{category}
+"""
+)
+
 async def list_expenses(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    cursor.execute(
-        "SELECT id, date, merchant, amount, category FROM expenses ORDER BY id DESC"
-    )
+    cursor.execute("""
+        SELECT
+            id,
+            date,
+            merchant,
+            amount,
+            category
+        FROM expenses
+        ORDER BY id DESC
+    """)
 
     rows = cursor.fetchall()
 
@@ -155,40 +205,26 @@ async def list_expenses(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("📭 Tiada rekod lagi.")
         return
 
-    text = "📒 Senarai Perbelanjaan\n\n"
+    text = "📒 SENARAI PERBELANJAAN\n"
+    text += "━━━━━━━━━━━━━━━━━━\n\n"
+
+    total = 0
 
     for row in rows:
-    text += (
-        f"🆔 ID: {row[0]}\n"
-        f"📅 Tarikh: {row[1]}\n"
-        f"🏪 Kedai: {row[2]}\n"
-        f"💰 Jumlah: RM{row[3]:.2f}\n"
-        f"📂 Kategori: {row[4]}\n"
-        "────────────────\n"
-    )
+
+        total += row[3]
+
+        text += (
+            f"🆔 ID : {row[0]}\n"
+            f"🏪 {row[2]}\n"
+            f"💰 RM{row[3]:.2f}\n"
+            f"📂 {row[4]}\n"
+            f"📅 {row[1]}\n"
+            "──────────────────\n"
+        )
+
+    text += f"\n💵 Jumlah Belanja : RM{total:.2f}"
+    text += f"\n📦 Bilangan Rekod : {len(rows)}"
 
     await update.message.reply_text(text)
 
-# Telegram Bot
-app = Application.builder().token(TOKEN).build()
-
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("list", list_expenses))
-app.add_handler(MessageHandler(filters.PHOTO, photo))
-
-# Web server untuk Render
-class Handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Bot is running!")
-
-def run_web():
-    port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(("0.0.0.0", port), Handler)
-    server.serve_forever()
-
-if __name__ == "__main__":
-    threading.Thread(target=run_web).start()
-    print("Bot sedang berjalan...")
-    app.run_polling(drop_pending_updates=True)
