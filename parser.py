@@ -356,7 +356,7 @@ def parse_receipt(text):
     # SMART AMOUNT DETECTION V2
     # ==========================
     
-       patterns = [
+    patterns = [
 
         # Highest Priority
         r"GRAND\s*TOTAL.*?RM?\s*(\d+(?:\.\d{1,2})?)",
@@ -387,13 +387,13 @@ def parse_receipt(text):
             amount = float(match.group(1))
             break
 
-        if amount == 0:
+    if amount == 0:
+
+        values = []
     
-            values = []
-        
-            for line in lines:
-        
-                upper = line.upper()
+        for line in lines:
+    
+            upper = line.upper()
         
                 # Abaikan line yang bukan jumlah belanja
                 if any(word in upper for word in [
