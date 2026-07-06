@@ -53,8 +53,8 @@ def parse_receipt(text):
                     category = value["category"]
                     break
 
-        if merchant != "Tidak Dikenal":
-            break
+            if merchant != "Tidak Dikenal":
+                break
 
     # Bank / E-Wallet Detection
     if merchant == "Tidak Dikenal":
