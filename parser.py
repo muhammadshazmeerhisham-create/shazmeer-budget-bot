@@ -74,22 +74,28 @@ def parse_receipt(text):
             category = "Transfer"
 
     # Date Detection
-    date_match = re.search(
-        r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
-        text
-    )
+    date_patterns = [
+        r"(\d{2}/\d{2}/\d{2,4})",
+        r"(\d{2}-\d{2}-\d{2,4})",
+    ]
 
-    if date_match:
-        receipt_date = date_match.group(1)
+    for p in date_patterns:
+        m = re.search(p, text)
+        if m:
+            receipt_date = m.group(1)
+            break
 
     # Time Detection
-    time_match = re.search(
-        r"(\d{1,2}:\d{2}\s?(?:AM|PM|am|pm)?)",
-        text
-    )
+    time_patterns = [
+        r"(\d{2}:\d{2}:\d{2})",
+        r"(\d{2}:\d{2})",
+    ]
 
-    if time_match:
-        receipt_time = time_match.group(1)
+    for p in time_patterns:
+        m = re.search(p, text)
+        if m:
+            receipt_time = m.group(1)
+            break
 
     # Recipient Detection
     recipient_patterns = [
@@ -102,6 +108,19 @@ def parse_receipt(text):
         if match:
             recipient = match.group(1).strip()
             break
+
+    # Invoice Detection
+    reference_patterns = [
+
+    r"Invoice\s*No\.?\s*[: ]*\s*([A-Za-z0-9]+)",
+
+    r"Receipt\s*No\.?\s*[: ]*\s*([A-Za-z0-9]+)",
+
+    r"Ref\s*#?\s*([A-Za-z0-9]+)",
+
+   r"Transaction\s*ID\s*[: ]*\s*([A-Za-z0-9]+)",
+
+    ]
 
     # Reference Detection
     reference_patterns = [
@@ -119,19 +138,24 @@ def parse_receipt(text):
 
     # Total
     patterns = [
-        r"GRAND\s*TOTAL.*?(\d+\.\d{2})",
-        r"TOTAL.*?(\d+\.\d{2})",
-        r"NET\s*TOTAL.*?(\d+\.\d{2})",
-        r"AMOUNT.*?(\d+\.\d{2})",
-        r"RM\s*(\d+\.\d{2})",
+        r"GRAND\s*TOTAL\s*[: ]*RM?\s*(\d+\.\d{2})",
+        r"TOTAL\s*[: ]*RM?\s*(\d+\.\d{2})",
+        r"SUB\s*TOTAL\s*[: ]*RM?\s*(\d+\.\d{2})",
+        r"AMOUNT\s*PAID\s*[: ]*RM?\s*(\d+\.\d{2})",
+        r"TENDER\s*[: ]*RM?\s*(\d+\.\d{2})",
+        r"BALANCE\s*[: ]*RM?\s*(\d+\.\d{2})",
     ]
 
-    for p in patterns:
-        m = re.search(p, text, re.IGNORECASE)
+    for line in reversed(lines):
+        for p in patterns:
+            m = re.search(p, line, re.IGNORECASE)
 
-        if m:
-            amount = float(m.group(1))
-            break
+            if m:
+                amount = float(m.group(1))
+                break
+
+    if amount > 0:
+        break
 
     if amount == 0:
         numbers = re.findall(r"\d+\.\d{2}", text)
@@ -143,7 +167,7 @@ def parse_receipt(text):
                 x = float(n)
 
                 if 1 <= x <= 10000:
-                    values.append(x)
+                values.append(x)
             except:
                 pass
 
