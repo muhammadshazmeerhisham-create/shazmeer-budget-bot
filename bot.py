@@ -108,9 +108,9 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(text)
     print("======================")
 
-# ==========================
-# SAFIA SMART PARSER V3
-# ==========================
+    # ==========================
+    # SAFIA SMART PARSER V3
+    # ==========================
 
     merchant = "Tidak Dikenal"
     amount = 0.0
@@ -120,8 +120,72 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     print("===== PARSED LINES =====")
     for i, line in enumerate(lines):
-       print(i, ":", line)
-       print("========================")
+        print(i, ":", line)
+    print("========================")
+
+    # MERCHANT
+    for i, line in enumerate(lines):
+        if line.lower() == "recipient" and i + 1 < len(lines):
+            merchant = lines[i + 1]
+            break
+
+    if merchant == "Tidak Dikenal":
+        for line in lines:
+            if "kedai" in line.lower():
+                merchant = line
+                break
+
+    # AMOUNT
+    for i, line in enumerate(lines):
+        if line.lower() == "amount" and i + 1 < len(lines):
+            m = re.search(r"([\d,]+\.\d{2})", lines[i + 1])
+            if m:
+                amount = float(m.group(1).replace(",", ""))
+                break
+
+    if amount == 0:
+        m = re.search(r"RM\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
+        if m:
+            amount = float(m.group(1).replace(",", ""))
+
+    if amount == 0:
+        numbers = re.findall(r"\d[\d,]*\.\d{2}", text)
+        if numbers:
+            amount = float(numbers[0].replace(",", ""))
+
+    print("Merchant :", merchant)
+    print("Amount   :", amount)
+
+    cursor.execute(
+        """
+        INSERT INTO expenses(
+            date,
+            merchant,
+            amount,
+            category,
+            note
+        )
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            merchant,
+            amount,
+            category,
+            ""
+        )
+    )
+
+    conn.commit()
+
+    message = (
+        "✅ Resit berjaya disimpan\n\n"
+        f"🏪 Kedai:\n{merchant}\n\n"
+        f"💰 Jumlah:\nRM{amount:.2f}\n\n"
+        f"📂 Kategori:\n{category}"
+    )
+
+    await update.message.reply_text(message)
 
 
 # -------------------------
