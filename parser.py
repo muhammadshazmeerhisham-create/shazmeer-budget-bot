@@ -151,12 +151,12 @@ for pattern in reference_patterns:
             amount = max(values)
 
 
-     return {
-        "merchant": merchant,
-        "recipient": recipient,
-        "amount": amount,
-        "category": category,
-        "receipt_date": receipt_date,
-        "receipt_time": receipt_time,
-        "reference": reference,
-     }
+         return {
+            "merchant": merchant,
+            "recipient": recipient,
+            "amount": amount,
+            "category": category,
+            "receipt_date": receipt_date,
+            "receipt_time": receipt_time,
+            "reference": reference,
+         }
