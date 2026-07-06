@@ -153,9 +153,7 @@ def parse_receipt(text):
             if m:
                 amount = float(m.group(1))
                 break
-
-    if amount > 0:
-        break
+          
 
     if amount == 0:
         numbers = re.findall(r"\d+\.\d{2}", text)
