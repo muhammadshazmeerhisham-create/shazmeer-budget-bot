@@ -392,37 +392,35 @@ def parse_receipt(text):
         values = []
     
         for line in lines:
-    
+
             upper = line.upper()
-        
-                # Abaikan line yang bukan jumlah belanja
-                if any(word in upper for word in [
-        
-                    "CASH",
-                    "CHANGE",
-                    "BALANCE",
-                    "TENDER",
-                    "ROUNDING",
-                    "DISCOUNT",
-                    "TEL",
-                    "PHONE",
-        
-                ]):
-                    continue
-        
-                nums = re.findall(r"\d+(?:\.\d{1,2})?", line)
-        
-                for n in nums:
-        
-                    try:
-        
-                        x = float(n)
-        
-                        if 1 <= x <= 10000:
-                            values.append(x)
-        
-                    except:
-                        pass
+
+            # Abaikan line yang bukan jumlah belanja
+            if any(word in upper for word in [
+                "CASH",
+                "CHANGE",
+                "BALANCE",
+                "TENDER",
+                "ROUNDING",
+                "DISCOUNT",
+                "TEL",
+                "PHONE",
+            ]):
+                continue
+
+            nums = re.findall(r"\d+(?:\.\d{1,2})?", line)
+
+            for n in nums:
+
+                try:
+
+                    x = float(n)
+
+                    if 1 <= x <= 10000:
+                        values.append(x)
+
+                except:
+                    pass
         
             if values:
         
