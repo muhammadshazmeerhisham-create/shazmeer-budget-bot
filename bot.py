@@ -90,7 +90,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = response.json()
 
     print("========== OCR DEBUG ==========")
-    print("HTTP Status:", response.status_code)
+    print("Status Code:", response.status_code)
     print(result)
     print("===============================")
 
