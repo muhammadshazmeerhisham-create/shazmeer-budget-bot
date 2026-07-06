@@ -119,8 +119,8 @@ print("Amount   :", amount)
 print("Category :", category)
 print("==============================")
 
-    # Simpan ke database
-    cursor.execute(
+# Simpan ke database
+cursor.execute(
         """ INSERT INTO expenses( date, merchant, amount, category, note ) VALUES (?, ?, ?, ?, ?) """,
         (
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -131,9 +131,9 @@ print("==============================")
         )
     )
 
-    conn.commit()
+conn.commit()
 
-    await update.message.reply_text(
+await update.message.reply_text(
         f"""✅ Resit berjaya disimpan 🏪 Kedai: {merchant} 💰 Jumlah: RM{amount:.2f} 📂 Kategori: {category} """
     )
 
