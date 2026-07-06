@@ -103,7 +103,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = result["ParsedResults"][0]["ParsedText"]
 
     print("===== OCR TEXT =====")
-    print(repr(text))
+    print(text)
     print("====================")
 
 # ==========================
