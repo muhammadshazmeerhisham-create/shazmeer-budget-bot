@@ -14,6 +14,9 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
+
+from merchant_db import MERCHANT_DB
+
 # ==========================
 # CONFIG
 # ==========================
