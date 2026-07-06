@@ -270,17 +270,17 @@ def parse_receipt(text):
     
     for pattern in recipient_patterns:
 
-    match = re.search(pattern, text, re.IGNORECASE)
-
-    if match:
-
-        candidate = match.group(1).strip()
-
-        if any(word in candidate.upper() for word in recipient_blacklist):
-            continue
-
-        recipient = candidate
-        break
+        match = re.search(pattern, text, re.IGNORECASE)
+    
+        if match:
+    
+            candidate = match.group(1).strip()
+    
+            if any(word in candidate.upper() for word in recipient_blacklist):
+                continue
+    
+            recipient = candidate
+            break
 
     # ==========================
     # SMART RECIPIENT DETECTION V2
