@@ -1,5 +1,4 @@
 import os
-import sqlite3
 import threading
 import requests
 import re
@@ -25,14 +24,8 @@ from config import BOT_TOKEN, OCR_API_KEY
 # DATABASE
 # ==========================
 
-conn = sqlite3.connect("safia.db", check_same_thread=False)
-cursor = conn.cursor()
+from database import conn, cursor
 
-cursor.execute(""" CREATE TABLE IF NOT EXISTS expenses( id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, merchant TEXT, amount REAL, category TEXT, note TEXT ) """)
-
-cursor.execute(""" CREATE TABLE IF NOT EXISTS salary( id INTEGER PRIMARY KEY AUTOINCREMENT, salary_type TEXT, amount REAL ) """)
-
-conn.commit()
 # ==========================
 # START
 # ==========================
