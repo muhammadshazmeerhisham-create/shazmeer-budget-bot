@@ -356,7 +356,7 @@ def parse_receipt(text):
     # SMART AMOUNT DETECTION V2
     # ==========================
     
-   patterns = [
+       patterns = [
 
         # Highest Priority
         r"GRAND\s*TOTAL.*?RM?\s*(\d+(?:\.\d{1,2})?)",
@@ -387,46 +387,46 @@ def parse_receipt(text):
             amount = float(match.group(1))
             break
 
-    if amount == 0:
-
-        values = []
+        if amount == 0:
     
-        for line in lines:
-    
-            upper = line.upper()
-    
-            # Abaikan line yang bukan jumlah belanja
-            if any(word in upper for word in [
-    
-                "CASH",
-                "CHANGE",
-                "BALANCE",
-                "TENDER",
-                "ROUNDING",
-                "DISCOUNT",
-                "TEL",
-                "PHONE",
-    
-            ]):
-                continue
-    
-            nums = re.findall(r"\d+(?:\.\d{1,2})?", line)
-    
-            for n in nums:
-    
-                try:
-    
-                    x = float(n)
-    
-                    if 1 <= x <= 10000:
-                        values.append(x)
-    
-                except:
-                    pass
-    
-        if values:
-    
-            amount = max(values)
+            values = []
+        
+            for line in lines:
+        
+                upper = line.upper()
+        
+                # Abaikan line yang bukan jumlah belanja
+                if any(word in upper for word in [
+        
+                    "CASH",
+                    "CHANGE",
+                    "BALANCE",
+                    "TENDER",
+                    "ROUNDING",
+                    "DISCOUNT",
+                    "TEL",
+                    "PHONE",
+        
+                ]):
+                    continue
+        
+                nums = re.findall(r"\d+(?:\.\d{1,2})?", line)
+        
+                for n in nums:
+        
+                    try:
+        
+                        x = float(n)
+        
+                        if 1 <= x <= 10000:
+                            values.append(x)
+        
+                    except:
+                        pass
+        
+            if values:
+        
+                amount = max(values)
 
     # ==========================
     # SMART CATEGORY DETECTION V2
