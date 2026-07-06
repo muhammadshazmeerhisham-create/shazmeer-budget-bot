@@ -336,22 +336,22 @@ def parse_receipt(text):
 
         if amount == 0:
     
-        numbers = re.findall(r"\d+\.\d{2}", text)
-    
-        values = []
-    
-        for n in numbers:
-            try:
-                x = float(n)
-    
-                if 1 <= x <= 10000:
-                    values.append(x)
-    
-            except:
-                pass
-    
-        if values:
-            amount = max(values)
+            numbers = re.findall(r"\d+\.\d{2}", text)
+        
+            values = []
+        
+            for n in numbers:
+                try:
+                    x = float(n)
+        
+                    if 1 <= x <= 10000:
+                        values.append(x)
+        
+                except:
+                    pass
+        
+            if values:
+                amount = max(values)
 
     # ==========================
     # SMART CATEGORY DETECTION V2
