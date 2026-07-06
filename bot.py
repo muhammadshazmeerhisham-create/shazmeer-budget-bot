@@ -87,14 +87,19 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     result = response.json()
 
+    print("========== OCR DEBUG ==========")
+    print("HTTP Status:", response.status_code)
+    print(result)
+    print("===============================")
+
     text = ""
 
     if result.get("ParsedResults"):
         text = result["ParsedResults"][0]["ParsedText"]
 
-    print("===== OCR RESULT =====")
-    print(text)
-    print("======================")
+    print("===== OCR TEXT =====")
+    print(repr(text))
+    print("====================")
 
 # ==========================
 # SMART AI PARSER V2
