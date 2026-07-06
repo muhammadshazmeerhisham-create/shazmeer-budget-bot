@@ -139,8 +139,13 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
 
     await update.message.reply_text(
-        f"""✅ Resit berjaya disimpan 🏪 Kedai: {merchant} 💰 Jumlah: RM{amount:.2f} 📂 Kategori: {category} """
-    )
+    f"""✅ Resit berjaya disimpan
+
+🏪 Kedai      : {merchant}
+💰 Jumlah     : RM{amount:.2f}
+📂 Kategori   : {category}
+"""
+)
 
 
 # ==========================
