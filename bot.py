@@ -32,6 +32,8 @@ cursor = conn.cursor()
 
 cursor.execute(""" CREATE TABLE IF NOT EXISTS expenses( id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, merchant TEXT, amount REAL, category TEXT, note TEXT ) """)
 
+cursor.execute(""" CREATE TABLE IF NOT EXISTS expense_items( id INTEGER PRIMARY KEY AUTOINCREMENT, expense_id INTEGER, item_name TEXT, quantity REAL, unit_price REAL, total_price REAL, FOREIGN KEY(expense_id) REFERENCES expenses(id) ) """)
+
 cursor.execute(""" CREATE TABLE IF NOT EXISTS salary( id INTEGER PRIMARY KEY AUTOINCREMENT, salary_type TEXT, amount REAL ) """)
 
 conn.commit()
@@ -61,6 +63,67 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Sila pilih menu di bawah 👇",
         reply_markup=reply_markup
     )
+
+# ==========================
+# PARSE RECEIPT ITEMS
+# ==========================
+
+def parse_receipt_items(text):
+    """
+    Parse receipt text to extract items with quantity and price
+    Expected format: ITEM_NAME | QUANTITY | PRICE
+    Returns: list of (item_name, quantity, unit_price, total_price)
+    """
+    items = []
+    lines = [line.strip() for line in text.split("\n") if line.strip()]
+    
+    print("===== PARSING ITEMS =====")
+    
+    for line in lines:
+        # Skip header lines and common receipt text
+        if any(skip in line.lower() for skip in ["total", "subtotal", "tax", "diskaun", "payment", "thank", "date", "time", "qty", "price", "item", "---", "===", "receipt"]):
+            continue
+        
+        # Try to parse line with multiple number patterns
+        # Pattern: ITEM_NAME | QTY | PRICE or ITEM_NAME QTY PRICE
+        
+        # Split by pipe first (if exists)
+        if "|" in line:
+            parts = [p.strip() for p in line.split("|")]
+            if len(parts) >= 3:
+                item_name = parts[0]
+                try:
+                    qty = float(re.search(r"[\d.]+", parts[1]).group())
+                    price_match = re.search(r"[\d.]+", parts[2])
+                    if price_match:
+                        price = float(price_match.group())
+                        total = qty * price
+                        items.append((item_name, qty, price, total))
+                        print(f"✓ {item_name} | {qty} x RM{price:.2f} = RM{total:.2f}")
+                except:
+                    continue
+        else:
+            # Try pattern: NAME QTY PRICE (space separated)
+            numbers = re.findall(r"[\d.]+", line)
+            if len(numbers) >= 2:
+                # Get last two numbers as qty and price
+                try:
+                    price = float(numbers[-1])
+                    qty = float(numbers[-2])
+                    
+                    # Extract item name (remove numbers from end)
+                    item_name = re.sub(r"[\d.\s]+$", "", line).strip()
+                    
+                    # Only add if item_name is reasonable length
+                    if len(item_name) > 2 and price > 0.5:
+                        total = qty * price
+                        items.append((item_name, qty, price, total))
+                        print(f"✓ {item_name} | {qty} x RM{price:.2f} = RM{total:.2f}")
+                except:
+                    continue
+    
+    print("==========================")
+    return items
 
 # ==========================
 # OCR SCAN RESIT
@@ -117,6 +180,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     merchant = "Tidak Dikenal"
     amount = 0.0
     category = "Lain-lain"
+    items = []
 
     lines = [line.strip() for line in text.split("\n") if line.strip()]
 
@@ -140,57 +204,62 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if merchant == "Tidak Dikenal":
 
         for line in lines:
-            if "kedai" in line.lower():
+            if "kedai" in line.lower() or "supermarket" in line.lower() or "store" in line.lower():
                 merchant = line
                 break
 
     # -------------------------
-    # AMOUNT (Priority 1)
-    # selepas Amount
+    # PARSE ITEMS
     # -------------------------
 
-    for i, line in enumerate(lines):
+    items = parse_receipt_items(text)
 
-        if line.lower() == "amount" and i + 1 < len(lines):
+    # -------------------------
+    # CALCULATE TOTAL FROM ITEMS
+    # -------------------------
 
-            next_line = lines[i + 1]
+    if items:
+        amount = sum(total for _, _, _, total in items)
+        print(f"Calculated total from items: RM{amount:.2f}")
+    else:
+        # Fallback to old method if no items parsed
+        
+        # Priority 1: selepas Amount
+        for i, line in enumerate(lines):
 
-            # Updated: Match numbers with or without decimals
-            m = re.search(r"([\d,]+(?:\.\d+)?)", next_line)
+            if line.lower() == "amount" and i + 1 < len(lines):
 
+                next_line = lines[i + 1]
+
+                m = re.search(r"([\d,]+(?:\.\d+)?)", next_line)
+
+                if m:
+                    amount = float(m.group(1).replace(",", ""))
+                    break
+
+        # Priority 2: Cari RMxx.xx seluruh OCR
+        if amount == 0:
+            m = re.search(r"RM\s*([\d,]+(?:\.\d+)?)", text, re.IGNORECASE)
             if m:
                 amount = float(m.group(1).replace(",", ""))
-                break
 
-    # -------------------------
-    # Priority 2
-    # Cari RMxx.xx seluruh OCR
-    # -------------------------
-
-    if amount == 0:
-        # Updated: Match RM prefix with flexible decimal places
-        m = re.search(r"RM\s*([\d,]+(?:\.\d+)?)", text, re.IGNORECASE)
-        if m:
-            amount = float(m.group(1).replace(",", ""))
-
-    # -------------------------
-    # Priority 3
-    # Cari nombor xx.xx
-    # -------------------------
-
-    if amount == 0:
-        # Updated: Match numbers with flexible decimal places
-        numbers = re.findall(r"\d[\d,]*(?:\.\d+)?", text)
-        if numbers:
-            # Filter out very small numbers (likely noise)
-            for num_str in numbers:
-                num = float(num_str.replace(",", ""))
-                if num > 0.5:  # Only accept amounts >= 0.50
-                    amount = num
-                    break
+        # Priority 3: Cari nombor xx.xx
+        if amount == 0:
+            numbers = re.findall(r"\d[\d,]*(?:\.\d+)?", text)
+            if numbers:
+                for num_str in numbers:
+                    num = float(num_str.replace(",", ""))
+                    if num > 0.5:
+                        amount = num
+                        break
 
     print("Merchant :", merchant)
     print("Amount   :", amount)
+    print("Items    :", len(items))
+
+    # -------------------------
+    # SAVE TO DATABASE
+    # -------------------------
 
     cursor.execute(
         """
@@ -214,9 +283,44 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     conn.commit()
 
+    # Get the expense ID
+    expense_id = cursor.lastrowid
+
+    # Save individual items
+    for item_name, qty, unit_price, total_price in items:
+        cursor.execute(
+            """
+            INSERT INTO expense_items(
+                expense_id,
+                item_name,
+                quantity,
+                unit_price,
+                total_price
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (expense_id, item_name, qty, unit_price, total_price)
+        )
+
+    conn.commit()
+
+    # -------------------------
+    # BUILD RESPONSE MESSAGE
+    # -------------------------
+
     message = (
         "✅ Resit berjaya disimpan\n\n"
         f"🏪 Kedai:\n{merchant}\n\n"
+    )
+
+    if items:
+        message += "📦 Items:\n"
+        for item_name, qty, unit_price, total_price in items:
+            message += f"  • {item_name}\n"
+            message += f"    {qty} x RM{unit_price:.2f} = RM{total_price:.2f}\n"
+        message += "\n"
+
+    message += (
         f"💰 Jumlah:\nRM{amount:.2f}\n\n"
         f"📂 Kategori:\n{category}"
     )
@@ -229,7 +333,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def list_expenses(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    cursor.execute(""" SELECT date, merchant, amount, category FROM expenses ORDER BY id DESC """)
+    cursor.execute(""" SELECT id, date, merchant, amount, category FROM expenses ORDER BY id DESC LIMIT 20 """)
 
     rows = cursor.fetchall()
 
@@ -243,14 +347,26 @@ async def list_expenses(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for row in rows:
 
-        total += row[2]
+        exp_id, date, merchant, amount, category = row
+        total += amount
 
         text += (
-            f"🏪 {row[1]}\n"
-            f"💰 RM{row[2]:.2f}\n"
-            f"📂 {row[3]}\n"
-            f"📅 {row[0]}\n\n"
+            f"🏪 {merchant}\n"
+            f"💰 RM{amount:.2f}\n"
+            f"📂 {category}\n"
+            f"📅 {date}\n"
         )
+
+        # Get items for this expense
+        cursor.execute(""" SELECT item_name, quantity, unit_price, total_price FROM expense_items WHERE expense_id = ? """, (exp_id,))
+        items = cursor.fetchall()
+
+        if items:
+            text += "  Items:\n"
+            for item_name, qty, unit_price, total_price in items:
+                text += f"    • {item_name}: {qty} x RM{unit_price:.2f}\n"
+
+        text += "\n"
 
     text += f"💵 Jumlah Belanja : RM{total:.2f}"
 
@@ -266,11 +382,21 @@ async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     total = cursor.fetchone()[0]
 
+    cursor.execute(""" SELECT COUNT(*) FROM expenses """)
+    transaction_count = cursor.fetchone()[0]
+
+    cursor.execute(""" SELECT COUNT(*) FROM expense_items """)
+    item_count = cursor.fetchone()[0]
+
     await update.message.reply_text(
         f"""📊 SAFIA Dashboard
 
 💰 Jumlah Belanja
-RM{total:.2f}"""
+RM{total:.2f}
+
+📊 Stats:
+Transactions: {transaction_count}
+Items: {item_count}"""
     )
 
 # ==========================
