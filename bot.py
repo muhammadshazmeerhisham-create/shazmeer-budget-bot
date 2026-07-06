@@ -24,6 +24,23 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 OCR_API_KEY = os.getenv("OCR_API_KEY")
 
 # ==========================
+# CATEGORY MAPPING
+# ==========================
+
+CATEGORY_KEYWORDS = {
+    "🥛 Dairy": ["susu", "keju", "yogurt", "butter", "krim", "cheese", "milk", "cream"],
+    "🍞 Bakery": ["roti", "kek", "donut", "pastry", "bread", "cake", "bun", "loaf"],
+    "🥬 Vegetables": ["sayur", "lobak", "bayam", "timun", "wortel", "kentang", "kubis", "vegetable"],
+    "🍎 Fruits": ["buah", "epal", "oren", "nanas", "pisang", "ceri", "strawberry", "watermelon", "fruit"],
+    "🥚 Protein": ["telur", "ayam", "daging", "ikan", "udang", "tahu", "egg", "chicken", "beef", "fish"],
+    "🥫 Canned": ["tin", "sardin", "sausage", "canned", "kaleng", "corned"],
+    "🧴 Personal Care": ["sabun", "syampu", "ubat gigi", "toothpaste", "shampoo", "soap", "deodorant"],
+    "🛁 Household": ["detergent", "tissue", "sampah", "sapu", "cloth", "bag", "plastic"],
+    "🍬 Snacks": ["keropok", "coklat", "gula-gula", "chips", "biscuit", "kuki", "cookie"],
+    "🥤 Beverages": ["air", "jus", "kopi", "teh", "coffee", "tea", "juice", "drink"],
+}
+
+# ==========================
 # DATABASE
 # ==========================
 
@@ -32,11 +49,29 @@ cursor = conn.cursor()
 
 cursor.execute(""" CREATE TABLE IF NOT EXISTS expenses( id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, merchant TEXT, amount REAL, category TEXT, note TEXT ) """)
 
-cursor.execute(""" CREATE TABLE IF NOT EXISTS expense_items( id INTEGER PRIMARY KEY AUTOINCREMENT, expense_id INTEGER, item_name TEXT, quantity REAL, unit_price REAL, total_price REAL, FOREIGN KEY(expense_id) REFERENCES expenses(id) ) """)
+cursor.execute(""" CREATE TABLE IF NOT EXISTS expense_items( id INTEGER PRIMARY KEY AUTOINCREMENT, expense_id INTEGER, item_name TEXT, item_category TEXT, quantity REAL, unit_price REAL, total_price REAL, FOREIGN KEY(expense_id) REFERENCES expenses(id) ) """)
 
 cursor.execute(""" CREATE TABLE IF NOT EXISTS salary( id INTEGER PRIMARY KEY AUTOINCREMENT, salary_type TEXT, amount REAL ) """)
 
 conn.commit()
+
+# ==========================
+# HELPER FUNCTIONS
+# ==========================
+
+def detect_category(item_name):
+    """
+    Auto-detect item category based on keywords
+    Returns: category emoji + name, or ❓ Others if no match
+    """
+    item_lower = item_name.lower()
+    
+    for category, keywords in CATEGORY_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword in item_lower:
+                return category
+    
+    return "❓ Others"
 
 # ==========================
 # START
@@ -98,8 +133,9 @@ def parse_receipt_items(text):
                     if price_match:
                         price = float(price_match.group())
                         total = qty * price
-                        items.append((item_name, qty, price, total))
-                        print(f"✓ {item_name} | {qty} x RM{price:.2f} = RM{total:.2f}")
+                        category = detect_category(item_name)
+                        items.append((item_name, category, qty, price, total))
+                        print(f"✓ {item_name} [{category}] | {qty} x RM{price:.2f} = RM{total:.2f}")
                 except:
                     continue
         else:
@@ -117,8 +153,9 @@ def parse_receipt_items(text):
                     # Only add if item_name is reasonable length
                     if len(item_name) > 2 and price > 0.5:
                         total = qty * price
-                        items.append((item_name, qty, price, total))
-                        print(f"✓ {item_name} | {qty} x RM{price:.2f} = RM{total:.2f}")
+                        category = detect_category(item_name)
+                        items.append((item_name, category, qty, price, total))
+                        print(f"✓ {item_name} [{category}] | {qty} x RM{price:.2f} = RM{total:.2f}")
                 except:
                     continue
     
@@ -219,7 +256,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # -------------------------
 
     if items:
-        amount = sum(total for _, _, _, total in items)
+        amount = sum(total for _, _, _, _, total in items)
         print(f"Calculated total from items: RM{amount:.2f}")
     else:
         # Fallback to old method if no items parsed
@@ -286,20 +323,21 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Get the expense ID
     expense_id = cursor.lastrowid
 
-    # Save individual items
-    for item_name, qty, unit_price, total_price in items:
+    # Save individual items with categories
+    for item_name, item_category, qty, unit_price, total_price in items:
         cursor.execute(
             """
             INSERT INTO expense_items(
                 expense_id,
                 item_name,
+                item_category,
                 quantity,
                 unit_price,
                 total_price
             )
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (expense_id, item_name, qty, unit_price, total_price)
+            (expense_id, item_name, item_category, qty, unit_price, total_price)
         )
 
     conn.commit()
@@ -315,8 +353,8 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if items:
         message += "📦 Items:\n"
-        for item_name, qty, unit_price, total_price in items:
-            message += f"  • {item_name}\n"
+        for item_name, item_category, qty, unit_price, total_price in items:
+            message += f"  {item_category} {item_name}\n"
             message += f"    {qty} x RM{unit_price:.2f} = RM{total_price:.2f}\n"
         message += "\n"
 
@@ -358,13 +396,17 @@ async def list_expenses(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         # Get items for this expense
-        cursor.execute(""" SELECT item_name, quantity, unit_price, total_price FROM expense_items WHERE expense_id = ? """, (exp_id,))
+        cursor.execute(""" SELECT item_name, item_category, quantity, unit_price, total_price FROM expense_items WHERE expense_id = ? ORDER BY item_category """, (exp_id,))
         items = cursor.fetchall()
 
         if items:
             text += "  Items:\n"
-            for item_name, qty, unit_price, total_price in items:
-                text += f"    • {item_name}: {qty} x RM{unit_price:.2f}\n"
+            current_category = None
+            for item_name, item_category, qty, unit_price, total_price in items:
+                if item_category != current_category:
+                    current_category = item_category
+                    text += f"    {item_category}\n"
+                text += f"      • {item_name}: {qty} x RM{unit_price:.2f}\n"
 
         text += "\n"
 
@@ -388,7 +430,12 @@ async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cursor.execute(""" SELECT COUNT(*) FROM expense_items """)
     item_count = cursor.fetchone()[0]
 
-    await update.message.reply_text(
+    # Get spending by category
+    cursor.execute(""" SELECT item_category, SUM(total_price) as category_total FROM expense_items GROUP BY item_category ORDER BY category_total DESC """)
+    
+    category_breakdown = cursor.fetchall()
+
+    message = (
         f"""📊 SAFIA Dashboard
 
 💰 Jumlah Belanja
@@ -396,8 +443,16 @@ RM{total:.2f}
 
 📊 Stats:
 Transactions: {transaction_count}
-Items: {item_count}"""
+Items: {item_count}
+
+📈 Spending by Category:
+"""
     )
+
+    for cat, cat_total in category_breakdown:
+        message += f"{cat} RM{cat_total:.2f}\n"
+
+    await update.message.reply_text(message)
 
 # ==========================
 # BUTTON MENU
