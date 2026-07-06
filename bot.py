@@ -3,6 +3,8 @@ import threading
 import requests
 import re
 
+from bank_db import BANK_DB
+from merchant_db import MERCHANT_DB
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
