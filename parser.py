@@ -247,17 +247,69 @@ def parse_receipt(text):
         r"Beneficiary\s*[:\-]?\s*(.+)",
     
     ]
+
+    recipient_blacklist = [
+
+        "ADDRESS",
+        "ADDR",
+        "LOCATION",
+        "TEL",
+        "PHONE",
+        "TELP",
+        "DESCRIPTION",
+        "PRICE",
+        "ITEM",
+        "TOTAL",
+        "SUBTOTAL",
+        "CASH",
+        "CHANGE",
+        "THANK YOU",
+        "SHOP NAME",
+    
+    ]
     
     for pattern in recipient_patterns:
+
+    match = re.search(pattern, text, re.IGNORECASE)
+
+    if match:
+
+        candidate = match.group(1).strip()
+
+        if any(word in candidate.upper() for word in recipient_blacklist):
+            continue
+
+        recipient = candidate
+        break
+
+    # ==========================
+    # SMART RECIPIENT DETECTION V2
+    # ==========================
     
-        match = re.search(pattern, text, re.IGNORECASE)
+    if recipient == "-":
     
-        if match:
+        for line in lines:
     
-            recipient = match.group(1).strip()
+            candidate = line.strip()
     
-            recipient = re.sub(r"\s{2,}", " ", recipient)
+            upper = candidate.upper()
     
+            if len(candidate) < 4:
+                continue
+    
+            if any(word in upper for word in recipient_blacklist):
+                continue
+    
+            if merchant.upper() in upper:
+                continue
+    
+            if re.search(r"\d{2,}", candidate):
+                continue
+    
+            if re.search(r"RM|TOTAL|CASH|CHANGE", upper):
+                continue
+    
+            recipient = candidate.title()
             break
 
     # ==========================
@@ -304,25 +356,26 @@ def parse_receipt(text):
     # SMART AMOUNT DETECTION V2
     # ==========================
     
-    patterns = [
+   patterns = [
+
+        # Highest Priority
+        r"GRAND\s*TOTAL.*?RM?\s*(\d+(?:\.\d{1,2})?)",
     
-        r"GRAND\s*TOTAL.*?RM?\s*(\d+\.\d{2})",
+        r"TOTAL\s*PAYABLE.*?RM?\s*(\d+(?:\.\d{1,2})?)",
     
-        r"TOTAL\s*RM?\s*(\d+\.\d{2})",
+        r"NET\s*TOTAL.*?RM?\s*(\d+(?:\.\d{1,2})?)",
     
-        r"NET\s*TOTAL.*?RM?\s*(\d+\.\d{2})",
+        r"TOTAL\s*DUE.*?RM?\s*(\d+(?:\.\d{1,2})?)",
     
-        r"AMOUNT\s*RM?\s*(\d+\.\d{2})",
+        r"TOTAL\s*RM?\s*(\d+(?:\.\d{1,2})?)",
     
-        r"AMOUNT\s*:\s*RM?\s*(\d+\.\d{2})",
+        r"AMOUNT\s*PAID.*?RM?\s*(\d+(?:\.\d{1,2})?)",
     
-        r"PAID\s*RM?\s*(\d+\.\d{2})",
+        r"AMOUNT\s*RM?\s*(\d+(?:\.\d{1,2})?)",
     
-        r"TOTAL\s*PAID\s*RM?\s*(\d+\.\d{2})",
+        r"PAID\s*RM?\s*(\d+(?:\.\d{1,2})?)",
     
-        r"TRANSFER\s*AMOUNT.*?RM?\s*(\d+\.\d{2})",
-    
-        r"RM\s*(\d+\.\d{2})",
+        r"TRANSFER\s*AMOUNT.*?RM?\s*(\d+(?:\.\d{1,2})?)",
     
     ]
     
@@ -335,23 +388,45 @@ def parse_receipt(text):
             break
 
         if amount == 0:
-    
-            numbers = re.findall(r"\d+\.\d{2}", text)
-        
-            values = []
-        
-            for n in numbers:
-                try:
-                    x = float(n)
-        
-                    if 1 <= x <= 10000:
-                        values.append(x)
-        
-                except:
-                    pass
-        
-            if values:
-                amount = max(values)
+
+    values = []
+
+    for line in lines:
+
+        upper = line.upper()
+
+        # Abaikan line yang bukan jumlah belanja
+        if any(word in upper for word in [
+
+            "CASH",
+            "CHANGE",
+            "BALANCE",
+            "TENDER",
+            "ROUNDING",
+            "DISCOUNT",
+            "TEL",
+            "PHONE",
+
+        ]):
+            continue
+
+        nums = re.findall(r"\d+(?:\.\d{1,2})?", line)
+
+        for n in nums:
+
+            try:
+
+                x = float(n)
+
+                if 1 <= x <= 10000:
+                    values.append(x)
+
+            except:
+                pass
+
+    if values:
+
+        amount = max(values)
 
     # ==========================
     # SMART CATEGORY DETECTION V2
