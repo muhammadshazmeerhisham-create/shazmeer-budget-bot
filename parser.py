@@ -1,5 +1,7 @@
 import re
 
+from merchant_db import MERCHANT_DB
+
 MERCHANTS = {
     "MASLEE": "Maslee",
     "LOTUSS": "Lotus's",
@@ -56,9 +58,10 @@ def parse_receipt(text):
     for line in lines[:15]:
         upper = line.upper()
 
-        for key, value in MERCHANTS.items():
+        for key, value in MERCHANT_DB.items():
             if key in upper:
-                merchant = value
+                merchant = value["name"]
+                category = value["category"]
                 break
 
         if merchant != "Tidak Dikenal":
@@ -97,8 +100,6 @@ def parse_receipt(text):
         if values:
             amount = max(values)
 
-    if merchant in CATEGORY:
-        category = CATEGORY[merchant]
 
     return {
         "merchant": merchant,
