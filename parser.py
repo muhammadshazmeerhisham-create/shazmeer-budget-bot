@@ -73,11 +73,11 @@ def parse_receipt(text):
             merchant = "RHB"
             category = "Transfer"
 
-        # Date Detection
-        date_match = re.search(
-            r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
-            text
-        )
+    # Date Detection
+    date_match = re.search(
+        r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
+        text
+    )
 
     if date_match:
         receipt_date = date_match.group(1)
@@ -103,8 +103,8 @@ def parse_receipt(text):
             recipient = match.group(1).strip()
         break
 
-   # Reference Detection
-   reference_patterns = [
+    # Reference Detection
+    reference_patterns = [
        r"Ref\s*#?\s*([A-Za-z0-9]+)",
        r"Reference\s*[:\-]?\s*([A-Za-z0-9]+)",
        r"Receipt\s*reference\s*[:\-]?\s*([A-Za-z0-9]+)",
