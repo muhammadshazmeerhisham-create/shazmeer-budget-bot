@@ -107,33 +107,33 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # SMART AI PARSER V2
 # ==========================
 
-result = parse_receipt(text)
+    result = parse_receipt(text)
 
-merchant = result["merchant"]
-amount = result["amount"]
-category = result["category"]
+    merchant = result["merchant"]
+    amount = result["amount"]
+    category = result["category"]
 
-print("========== SAFIA V3 ==========")
-print("Merchant :", merchant)
-print("Amount   :", amount)
-print("Category :", category)
-print("==============================")
+    print("========== SAFIA V3 ==========")
+    print("Merchant :", merchant)
+    print("Amount   :", amount)
+    print("Category :", category)
+    print("==============================")
 
-# Simpan ke database
-cursor.execute(
-        """ INSERT INTO expenses( date, merchant, amount, category, note ) VALUES (?, ?, ?, ?, ?) """,
-        (
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            merchant,
-            amount,
-            category,
-            ""
+    # Simpan ke database
+    cursor.execute(
+        """ INSERT INTO expenses( date,   merchant, amount, category, note ) VALUES   (?, ?, ?, ?, ?) """,
+            (
+                datetime.now().strftime("%Y-%m-%d  %H:%M:%S"),
+                merchant,
+                amount,
+                category,
+                ""
+            )
         )
-    )
 
-conn.commit()
+    conn.commit()
 
-await update.message.reply_text(
+    await update.message.reply_text(
         f"""✅ Resit berjaya disimpan 🏪 Kedai: {merchant} 💰 Jumlah: RM{amount:.2f} 📂 Kategori: {category} """
     )
 
