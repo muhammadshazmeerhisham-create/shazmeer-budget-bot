@@ -167,19 +167,19 @@ def parse_receipt(text):
                 x = float(n)
 
                 if 1 <= x <= 10000:
-                values.append(x)
+                    values.append(x)
             except:
                 pass
 
         if values:
             amount = max(values)
 
-    return {
-        "merchant": merchant,
-        "recipient": recipient,
-        "amount": amount,
-        "category": category,
-        "receipt_date": receipt_date,
-        "receipt_time": receipt_time,
-        "reference": reference,
-    }
+        return {
+            "merchant": merchant,
+            "recipient": recipient,
+            "amount": amount,
+            "category": category,
+            "receipt_date": receipt_date,
+            "receipt_time": receipt_time,
+            "reference": reference,
+        }
