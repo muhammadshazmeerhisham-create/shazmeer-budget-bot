@@ -387,46 +387,46 @@ def parse_receipt(text):
             amount = float(match.group(1))
             break
 
-        if amount == 0:
+    if amount == 0:
 
-    values = []
-
-    for line in lines:
-
-        upper = line.upper()
-
-        # Abaikan line yang bukan jumlah belanja
-        if any(word in upper for word in [
-
-            "CASH",
-            "CHANGE",
-            "BALANCE",
-            "TENDER",
-            "ROUNDING",
-            "DISCOUNT",
-            "TEL",
-            "PHONE",
-
-        ]):
-            continue
-
-        nums = re.findall(r"\d+(?:\.\d{1,2})?", line)
-
-        for n in nums:
-
-            try:
-
-                x = float(n)
-
-                if 1 <= x <= 10000:
-                    values.append(x)
-
-            except:
-                pass
-
-    if values:
-
-        amount = max(values)
+        values = []
+    
+        for line in lines:
+    
+            upper = line.upper()
+    
+            # Abaikan line yang bukan jumlah belanja
+            if any(word in upper for word in [
+    
+                "CASH",
+                "CHANGE",
+                "BALANCE",
+                "TENDER",
+                "ROUNDING",
+                "DISCOUNT",
+                "TEL",
+                "PHONE",
+    
+            ]):
+                continue
+    
+            nums = re.findall(r"\d+(?:\.\d{1,2})?", line)
+    
+            for n in nums:
+    
+                try:
+    
+                    x = float(n)
+    
+                    if 1 <= x <= 10000:
+                        values.append(x)
+    
+                except:
+                    pass
+    
+        if values:
+    
+            amount = max(values)
 
     # ==========================
     # SMART CATEGORY DETECTION V2
@@ -534,32 +534,7 @@ def parse_receipt(text):
     if confidence < 0:
         confidence = 0
 
-    # ==========================
-    # AI CONFIDENCE SCORE V1
-    # ==========================
     
-    confidence = 100
-    
-    if merchant == "Tidak Dikenal":
-        confidence -= 35
-    
-    if amount == 0:
-        confidence -= 30
-    
-    if receipt_date == "-":
-        confidence -= 10
-    
-    if receipt_time == "-":
-        confidence -= 10
-    
-    if recipient == "-":
-        confidence -= 10
-    
-    if reference == "-":
-        confidence -= 5
-    
-    if confidence < 0:
-        confidence = 0
 
     return {
         "merchant": merchant,
