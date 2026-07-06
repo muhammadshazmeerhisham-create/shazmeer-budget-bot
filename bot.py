@@ -27,6 +27,12 @@ from config import BOT_TOKEN, OCR_API_KEY
 from database import conn, cursor
 
 # ==========================
+# OCR
+# ==========================
+
+from ocr import scan_receipt
+
+# ==========================
 # START
 # ==========================
 
