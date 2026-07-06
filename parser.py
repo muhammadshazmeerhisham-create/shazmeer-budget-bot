@@ -8,6 +8,11 @@ def parse_receipt(text):
     merchant = "Tidak Dikenal"
     amount = 0.0
     category = "Lain-lain"
+    
+    receipt_date = "-"
+    receipt_time = "-"
+    reference = "-"
+    recipient = "-"
 
     lines = [x.strip() for x in text.splitlines() if x.strip()]
 
@@ -68,6 +73,50 @@ def parse_receipt(text):
             merchant = "RHB"
             category = "Transfer"
 
+        # Date Detection
+        date_match = re.search(
+            r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
+            text
+        )
+
+    if date_match:
+        receipt_date = date_match.group(1)
+
+    # Time Detection
+    time_match = re.search(
+        r"(\d{1,2}:\d{2}\s?(?:AM|PM|am|pm)?)",
+        text
+    )
+
+    if time_match:
+        receipt_time = time_match.group(1)
+
+    # Recipient Detection
+    recipient_patterns = [
+        r"Recipient\s*[:\-]?\s*(.+)",
+        r"Penerima\s*[:\-]?\s*(.+)",
+    ]
+
+    for pattern in recipient_patterns:
+        match = re.search(pattern, text,       re.IGNORECASE)
+        if match:
+            recipient = match.group(1).strip()
+        break
+
+   # Reference Detection
+   reference_patterns = [
+       r"Ref\s*#?\s*([A-Za-z0-9]+)",
+       r"Reference\s*[:\-]?\s*([A-Za-z0-9]+)",
+       r"Receipt\s*reference\s*[:\-]?\s*([A-Za-z0-9]+)",
+       r"Transaction\s*ID\s*[:\-]?\s*([A-Za-z0-9]+)",
+]
+
+for pattern in reference_patterns:
+    match = re.search(pattern, text, re.IGNORECASE)
+    if match:
+        reference = match.group(1).strip()
+        break
+
     # Total
     patterns = [
         r"GRAND\s*TOTAL.*?(\d+\.\d{2})",
@@ -102,8 +151,12 @@ def parse_receipt(text):
             amount = max(values)
 
 
-    return {
+     return {
         "merchant": merchant,
+        "recipient": recipient,
         "amount": amount,
         "category": category,
-    }
+        "receipt_date": receipt_date,
+        "receipt_time": receipt_time,
+        "reference": reference,
+     }
