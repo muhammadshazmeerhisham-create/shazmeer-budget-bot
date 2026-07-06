@@ -5,18 +5,28 @@ import os
 from merchant_db import MERCHANT_DB
 from bank_db import BANK_DB
 
+
+def load_custom_merchants():
+    if os.path.exists("merchant_db.json"):
+        with open("merchant_db.json", "r") as f:
+            return json.load(f)
+    return {}
+
+
 def parse_receipt(text):
 
     merchant = "Tidak Dikenal"
     amount = 0.0
     category = "Lain-lain"
-    
+
     receipt_date = "-"
     receipt_time = "-"
     reference = "-"
     recipient = "-"
 
     lines = [x.strip() for x in text.splitlines() if x.strip()]
+
+    custom_db = load_custom_merchants()
 
     # Merchant
     for line in lines[:15]:
@@ -27,6 +37,21 @@ def parse_receipt(text):
                 merchant = value["name"]
                 category = value["category"]
                 break
+
+        if merchant != "Tidak Dikenal":
+            break
+            
+    # Custom Merchant Database
+    if merchant == "Tidak Dikenal":
+    
+        for line in lines[:15]:
+            upper = line.upper()
+    
+            for key, value in custom_db.items():
+                if key in upper:
+                    merchant = value["name"]
+                    category = value["category"]
+                    break
 
         if merchant != "Tidak Dikenal":
             break
@@ -74,6 +99,25 @@ def parse_receipt(text):
         elif "RHB" in upper_text:
             merchant = "RHB"
             category = "Transfer"
+
+    # Auto Save Unknown Merchant
+    if merchant == "Tidak Dikenal":
+    
+        if len(lines) > 0:
+    
+            new_merchant = lines[0].strip()
+    
+            if len(new_merchant) > 2:
+    
+                custom_db[new_merchant.upper()] = {
+                    "name": new_merchant.title(),
+                    "category": "Lain-lain"
+                }
+    
+                with open("merchant_db.json", "w") as f:
+                    json.dump(custom_db, f, indent=4)
+    
+                merchant = new_merchant.title()
 
     # Date Detection
     date_patterns = [
