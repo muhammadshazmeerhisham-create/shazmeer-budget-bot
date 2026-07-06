@@ -155,7 +155,8 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             next_line = lines[i + 1]
 
-            m = re.search(r"([\d,]+\.\d{2})", next_line)
+            # Updated: Match numbers with or without decimals
+            m = re.search(r"([\d,]+(?:\.\d+)?)", next_line)
 
             if m:
                 amount = float(m.group(1).replace(",", ""))
@@ -167,7 +168,8 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # -------------------------
 
     if amount == 0:
-        m = re.search(r"RM\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
+        # Updated: Match RM prefix with flexible decimal places
+        m = re.search(r"RM\s*([\d,]+(?:\.\d+)?)", text, re.IGNORECASE)
         if m:
             amount = float(m.group(1).replace(",", ""))
 
@@ -177,9 +179,15 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # -------------------------
 
     if amount == 0:
-        numbers = re.findall(r"\d[\d,]*\.\d{2}", text)
+        # Updated: Match numbers with flexible decimal places
+        numbers = re.findall(r"\d[\d,]*(?:\.\d+)?", text)
         if numbers:
-            amount = float(numbers[0].replace(",", ""))
+            # Filter out very small numbers (likely noise)
+            for num_str in numbers:
+                num = float(num_str.replace(",", ""))
+                if num > 0.5:  # Only accept amounts >= 0.50
+                    amount = num
+                    break
 
     print("Merchant :", merchant)
     print("Amount   :", amount)
