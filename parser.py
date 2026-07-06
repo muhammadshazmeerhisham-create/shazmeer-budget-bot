@@ -1,50 +1,7 @@
 import re
 
 from merchant_db import MERCHANT_DB
-
-MERCHANTS = {
-    "MASLEE": "Maslee",
-    "LOTUSS": "Lotus's",
-    "TESCO": "Lotus's",
-    "MYDIN": "Mydin",
-    "99 SPEEDMART": "99 Speedmart",
-    "ECONSAVE": "Econsave",
-    "KK MART": "KK Mart",
-    "FAMILYMART": "FamilyMart",
-    "7-ELEVEN": "7-Eleven",
-    "PETRONAS": "Petronas",
-    "SHELL": "Shell",
-    "CALTEX": "Caltex",
-    "AEON": "AEON",
-    "MR DIY": "MR DIY",
-    "WATSONS": "Watsons",
-    "GUARDIAN": "Guardian",
-    "GRAB": "Grab",
-    "SHOPEE": "Shopee",
-    "GXBANK": "GXBank",
-}
-
-CATEGORY = {
-    "Maslee": "Grocery",
-    "Lotus's": "Grocery",
-    "Mydin": "Grocery",
-    "99 Speedmart": "Grocery",
-    "Econsave": "Grocery",
-    "KK Mart": "Convenience",
-    "FamilyMart": "Convenience",
-    "7-Eleven": "Convenience",
-    "Petronas": "Fuel",
-    "Shell": "Fuel",
-    "Caltex": "Fuel",
-    "Grab": "Transport",
-    "Shopee": "Shopping",
-    "Watsons": "Health",
-    "Guardian": "Health",
-    "MR DIY": "Home",
-    "AEON": "Shopping",
-    "GXBank": "Transfer",
-}
-
+from bank_db import BANK_DB
 
 def parse_receipt(text):
 
@@ -66,6 +23,50 @@ def parse_receipt(text):
 
         if merchant != "Tidak Dikenal":
             break
+
+    # Bank / E-Wallet Detection
+    if merchant == "Tidak Dikenal":
+
+        for line in lines[:15]:
+            upper = line.upper()
+
+            for key, value in BANK_DB.items():
+                if key in upper:
+                    merchant = value["name"]
+                    category = value["category"]
+                    break
+
+            if merchant != "Tidak Dikenal":
+                break
+
+    # Smart Detection
+    if merchant == "Tidak Dikenal":
+
+        upper_text = text.upper()
+
+        if "GX" in upper_text and "BANK" in upper_text:
+            merchant = "GXBank"
+            category = "Transfer"
+
+        elif "DUITNOW" in upper_text:
+            merchant = "DuitNow"
+            category = "Transfer"
+
+        elif "TNG" in upper_text:
+            merchant = "Touch 'n Go"
+            category = "E-Wallet"
+
+        elif "MAYBANK" in upper_text:
+            merchant = "Maybank"
+            category = "Transfer"
+
+        elif "CIMB" in upper_text:
+            merchant = "CIMB"
+            category = "Transfer"
+
+        elif "RHB" in upper_text:
+            merchant = "RHB"
+            category = "Transfer"
 
     # Total
     patterns = [
