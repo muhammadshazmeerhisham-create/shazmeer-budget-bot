@@ -31,6 +31,7 @@ from database import conn, cursor
 # ==========================
 
 from ocr import scan_receipt
+from parser import parse_receipt
 
 # ==========================
 # START
@@ -106,47 +107,17 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # SMART AI PARSER V2
 # ==========================
 
-    merchant = "Tidak Dikenal"
-    amount = 0.0
-    category = "Lain-lain"
+result = parse_receipt(text)
 
-    lines = [line.strip() for line in    text.split("\n") if line.strip()]
+merchant = result["merchant"]
+amount = result["amount"]
+category = result["category"]
 
-    for i, line in enumerate(lines):
-
-        lower = line.lower()
-
-    # --------------------------
-    # GXBank / DuitNow
-    # Recipient
-    # --------------------------
-    if lower == "recipient" and i + 1 < len(lines):
-        merchant = lines[i + 1]
-
-    # --------------------------
-    # OCR biasa
-    # --------------------------
-    elif "kedai" in lower:
-        merchant = line
-
-    # --------------------------
-    # Amount
-    # --------------------------
-    elif lower == "amount" and i + 1 < len(lines):
-
-        value = lines[i + 1]
-
-        match = re.search(r"([\d,]+\.\d{2})", value)
-
-        if match:
-            amount = float(match.group(1).replace(",", ""))
-
-    else:
-
-        match = re.search(r"RM\s*([\d,]+\.\d{2})", line)
-
-        if match:
-            amount = float(match.group(1).replace(",", ""))
+print("========== SAFIA V3 ==========")
+print("Merchant :", merchant)
+print("Amount   :", amount)
+print("Category :", category)
+print("==============================")
 
     # Simpan ke database
     cursor.execute(
