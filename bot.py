@@ -17,8 +17,6 @@ from telegram.ext import (
     filters,
 )
 
-from merchant_db import MERCHANT_DB
-
 # ==========================
 # CONFIG
 # ==========================
@@ -115,8 +113,12 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = parse_receipt(text)
 
     merchant = result["merchant"]
+    recipient = result["recipient"]
     amount = result["amount"]
     category = result["category"]
+    receipt_date = result["receipt_date"]
+    receipt_time = result["receipt_time"]
+    reference = result["reference"]
 
     print("========== SAFIA V3 ==========")
     print("Merchant :", merchant)
@@ -139,11 +141,17 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
 
     await update.message.reply_text(
-    f"""✅ Resit berjaya disimpan
+    f"""✅ Resit Berjaya Disimpan
 
 🏪 Kedai      : {merchant}
+👤 Penerima   : {recipient}
 💰 Jumlah     : RM{amount:.2f}
 📂 Kategori   : {category}
+📅 Tarikh     : {receipt_date}
+🕒 Masa       : {receipt_time}
+🔖 Rujukan    : {reference}
+
+💾 Data berjaya direkodkan.
 """
 )
 
