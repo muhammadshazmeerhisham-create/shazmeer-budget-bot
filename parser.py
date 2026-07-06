@@ -100,8 +100,9 @@ def parse_receipt(text):
     for pattern in recipient_patterns:
         match = re.search(pattern, text,       re.IGNORECASE)
         if match:
-            recipient = match.group(1).strip()
-        break
+            recipient = 
+    match.group(1).strip()
+            break
 
     # Reference Detection
     reference_patterns = [
@@ -111,11 +112,11 @@ def parse_receipt(text):
        r"Transaction\s*ID\s*[:\-]?\s*([A-Za-z0-9]+)",
 ]
 
-for pattern in reference_patterns:
-    match = re.search(pattern, text, re.IGNORECASE)
-    if match:
-        reference = match.group(1).strip()
-        break
+       for pattern in reference_patterns:
+           match = re.search(pattern, text, re.IGNORECASE)
+           if match:
+               reference = match.group(1).strip()
+            break
 
     # Total
     patterns = [
@@ -151,12 +152,12 @@ for pattern in reference_patterns:
             amount = max(values)
 
 
-         return {
-            "merchant": merchant,
-            "recipient": recipient,
-            "amount": amount,
-            "category": category,
-            "receipt_date": receipt_date,
-            "receipt_time": receipt_time,
-            "reference": reference,
-         }
+      return {
+          "merchant": merchant,
+          "recipient": recipient,
+          "amount": amount,
+          "category": category,
+          "receipt_date": receipt_date,
+          "receipt_time": receipt_time,
+          "reference": reference,
+       }
