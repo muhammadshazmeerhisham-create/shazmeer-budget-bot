@@ -2,6 +2,7 @@ import os
 import threading
 import requests
 import re
+import logging
 
 from bank_db import BANK_DB
 from merchant_db import MERCHANT_DB
@@ -22,6 +23,17 @@ from telegram.ext import (
 # ==========================
 
 from config import BOT_TOKEN, OCR_API_KEY
+
+# ==========================
+# LOGGING SYSTEM
+# ==========================
+
+logging.basicConfig(
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    level=logging.INFO
+)
+
+logger = logging.getLogger("SAFIA")
 
 # ==========================
 # DATABASE
@@ -283,7 +295,7 @@ if __name__ == "__main__":
         daemon=True
     ).start()
 
-    print("SAFIA Started...")
+    logger.info("🚀 SAFIA Bot Started")
 
     app.run_polling(
         drop_pending_updates=True
