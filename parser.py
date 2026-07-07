@@ -146,28 +146,20 @@ def detect_transaction_type(text):
 
     return "UNKNOWN"
 
-    # ==========================
-    # UNIVERSAL DETECTION ENGINE V1
-    # ==========================
-    
-    def detect_by_label(lines, labels):
-    
-        value = get_value_after_label(lines, labels)
-    
-        if value:
-            return value.strip()
-    
-        return "-"
+# ==========================
+# UNIVERSAL DETECTION ENGINE V1
+# ==========================
 
+def get_value_after_label(lines, labels):
     """
     Cari nilai selepas sesuatu label.
 
     Contoh:
 
-    Beneficiary name
+    Beneficiary Name
     MUHAMAD RIDHA BIN MD
 
-    return:
+    Return:
     MUHAMAD RIDHA BIN MD
     """
 
@@ -194,6 +186,16 @@ def detect_transaction_type(text):
                 next_index += 1
 
     return None
+
+
+def detect_by_label(lines, labels):
+
+    value = get_value_after_label(lines, labels)
+
+    if value:
+        return value.strip()
+
+    return "-"
 
 # ==========================
 # UNIVERSAL TRANSACTION TYPE V1
