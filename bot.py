@@ -54,6 +54,10 @@ from parser import parse_receipt
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    logger.info(
+    f"/start | User ID : {update.effective_user.id}"
+)
+
     keyboard = [
         ["📷 Scan Resit"],
         ["📒 Senarai", "📊 Dashboard"],
@@ -80,6 +84,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("PHOTO FUNCTION CALLED")
 
+    logger.info(
+    f"Photo received | User ID : {update.effective_user.id}"
+)
+
     print("===== PHOTO RECEIVED =====")
 
     if not update.message.photo:
@@ -103,6 +111,8 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     result = response.json()
+
+    logger.info("OCR API Success")
 
     print("========== OCR DEBUG ==========")
     print("Status Code:", response.status_code)
@@ -151,6 +161,10 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     conn.commit()
+
+    logger.info(
+    f"Database Saved | Merchant={merchant} | Amount={amount}"
+)
 
     await update.message.reply_text(
     f"""✅ Resit Berjaya Disimpan
@@ -219,6 +233,10 @@ async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==========================
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    logger.info(
+    f"Button : {update.message.text}"
+)
 
     text = update.message.text
 
