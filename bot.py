@@ -293,15 +293,18 @@ async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"""📊 SAFIA Dashboard 💰 Jumlah Belanja RM{total:.2f} """
     )
+
 # ==========================
 # BUTTON MENU
 # ==========================
 
-except Exception:
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    logger.exception(...)
+    logger.info(
+        f"Button : {update.message.text}"
+    )
 
-    await update.message.reply_text(...)
+    text = update.message.text
 
     if text == "📒 Senarai":
         await list_expenses(update, context)
@@ -320,14 +323,6 @@ except Exception:
     await update.message.reply_text(
         "Sila gunakan menu yang disediakan."
     )
-    
-    except Exception:
-
-logger.exception("Button Function Error")
-
-await update.message.reply_text(
-    "⚠️ Ralat semasa memproses menu. Sila cuba semula."
-)
 
 # ==========================
 # GLOBAL ERROR HANDLER
