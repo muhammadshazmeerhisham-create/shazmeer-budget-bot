@@ -82,13 +82,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==========================
 
 async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("PHOTO FUNCTION CALLED")
 
-    logger.info(
-    f"Photo received | User ID : {update.effective_user.id}"
-)
+    try:
 
-    print("===== PHOTO RECEIVED =====")
+        logger.info(
+            f"Photo received | User ID : {update.effective_user.id}"
+        )
+
+        print("PHOTO FUNCTION CALLED")
 
     if not update.message.photo:
         return
@@ -168,6 +169,16 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
     f"""✅ Resit Berjaya Disimpan
+
+        except Exception as e:
+
+        logger.exception("Photo Function Error")
+
+        await update.message.reply_text(
+            "❌ Maaf, berlaku ralat semasa memproses resit.\n"
+            "Sila cuba semula sebentar lagi."
+        )
+
 
 🏪 Kedai      : {merchant}
 👤 Penerima   : {recipient}
