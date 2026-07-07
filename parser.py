@@ -99,54 +99,6 @@ UNIVERSAL_DATE_PATTERNS = [
 def get_value_after_label(lines, labels):
 
 # ==========================
-# UNIVERSAL TRANSACTION TYPE
-# ==========================
-
-def detect_transaction_type(text):
-
-    upper = text.upper()
-
-    if (
-        "SCAN & PAY" in upper
-        or "DUITNOW QR" in upper
-        or "QR PAYMENT" in upper
-        or "MERCHANT NAME" in upper
-    ):
-        return "QR_PAYMENT"
-
-    if (
-        "BENEFICIARY" in upper
-        or "TRANSFER SUCCESSFUL" in upper
-        or "TRANSFER DETAILS" in upper
-    ):
-        return "BANK_TRANSFER"
-
-    if (
-        "TAX INVOICE" in upper
-        or "RECEIPT" in upper
-        or "CHANGE" in upper
-        or "CASH" in upper
-    ):
-        return "RETAIL_RECEIPT"
-
-    if (
-        "TOUCH 'N GO" in upper
-        or "TNG EWALLET" in upper
-        or "BOOST" in upper
-        or "GRABPAY" in upper
-        or "SHOPEEPAY" in upper
-    ):
-        return "E_WALLET"
-
-    if (
-        "SHOPEE" in upper
-        or "LAZADA" in upper
-    ):
-        return "MARKETPLACE"
-
-    return "UNKNOWN"
-
-# ==========================
 # UNIVERSAL DETECTION ENGINE V1
 # ==========================
 
@@ -452,6 +404,10 @@ if merchant_from_label:
     # UNIVERSAL LABEL DETECTION V4
     # ==========================
     
+    # ==========================
+    # UNIVERSAL LABEL DETECTION V4
+    # ==========================
+    
     receipt_date = get_value_after_label(
         lines,
         [
@@ -479,8 +435,6 @@ if merchant_from_label:
             receipt_date = "-"
     
     date_patterns = [
-    ...
-    ]
     
         r"(\d{4}-\d{2}-\d{2})",
     
@@ -495,11 +449,11 @@ if merchant_from_label:
     ]
     
     if receipt_date == "-":
-
+    
         for pattern in date_patterns:
-        
+    
             match = re.search(pattern, text, re.IGNORECASE)
-        
+    
             if match:
                 receipt_date = match.group(1)
                 break
