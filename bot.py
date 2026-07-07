@@ -61,25 +61,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         keyboard = [
-        ["📷 Scan Resit"],
-        ["📒 Senarai", "📊 Dashboard"],
-        ["💰 Gaji 28hb", "💸 Gaji 7hb"],
-        ["⚙️ Tetapan"]
-    ]
+            ["📷 Scan Resit"],
+            ["📒 Senarai", "📊 Dashboard"],
+            ["💰 Gaji 28hb", "💸 Gaji 7hb"],
+            ["⚙️ Tetapan"]
+        ]
 
-    reply_markup = ReplyKeyboardMarkup(
-        keyboard,
-        resize_keyboard=True
-    )
+        reply_markup = ReplyKeyboardMarkup(
+            keyboard,
+            resize_keyboard=True
+        )
 
-    await update.message.reply_text(
-        "🤖 SAFIA\n\n"
-        "Smart AI Financial Assistant\n\n"
-        "Selamat datang!\n\n"
-        "Sila pilih menu di bawah 👇",
-        reply_markup=reply_markup
-    )
-    
+        await update.message.reply_text(
+            "🤖 SAFIA\n\n"
+            "Smart AI Financial Assistant\n\n"
+            "Selamat datang!\n\n"
+            "Sila pilih menu di bawah 👇",
+            reply_markup=reply_markup
+        )
+
     except Exception:
 
         logger.exception("Start Function Error")
@@ -87,7 +87,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ Ralat semasa membuka menu utama."
         )
-
 # ==========================
 # OCR SCAN RESIT
 # ==========================
