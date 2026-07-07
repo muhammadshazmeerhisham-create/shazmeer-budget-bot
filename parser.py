@@ -12,6 +12,60 @@ def load_custom_merchants():
             return json.load(f)
     return {}
 
+# ==========================
+# UNIVERSAL LABEL DETECTION ENGINE V1
+# ==========================
+
+def get_value_after_label(lines, labels):
+
+    """
+    Cari nilai selepas sesuatu label.
+
+    Contoh:
+
+    Beneficiary name
+    MUHAMAD RIDHA BIN MD
+
+    return:
+    MUHAMAD RIDHA BIN MD
+    """
+
+    if isinstance(labels, str):
+        labels = [labels]
+
+    labels = [label.upper().strip() for label in labels]
+
+    for index, line in enumerate(lines):
+
+        current = line.strip().upper()
+
+        if current in labels:
+
+            next_index = index + 1
+
+            while next_index < len(lines):
+
+                value = lines[next_index].strip()
+
+                if value:
+                    return value
+
+                next_index += 1
+
+    return None
+
+# ==========================
+# UNIVERSAL VALIDATION ENGINE V1
+# ==========================
+
+def is_invalid_value(value, invalid_words):
+
+    if not value:
+        return True
+
+    upper = value.upper().strip()
+
+    return upper in [word.upper() for word in invalid_words]
 
 def parse_receipt(text):
 
@@ -176,6 +230,36 @@ def parse_receipt(text):
     # ==========================
     # SMART DATE DETECTION V2
     # ==========================
+
+    # ==========================
+    # UNIVERSAL LABEL DETECTION V4
+    # ==========================
+    
+    receipt_date = get_value_after_label(
+        lines,
+        [
+            "Transaction Date",
+            "Date",
+            "Payment Date",
+            "Transfer Date",
+            "Tarikh",
+            "Tarikh Transaksi"
+        ]
+    )
+    
+    # Validation
+    if receipt_date:
+    
+        if not re.search(
+            r"\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4}"
+            r"|"
+            r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}"
+            r"|"
+            r"\d{4}-\d{2}-\d{2}",
+            receipt_date,
+            re.IGNORECASE
+        ):
+            receipt_date = "-"
     
     date_patterns = [
     
@@ -191,13 +275,15 @@ def parse_receipt(text):
     
     ]
     
-    for pattern in date_patterns:
-    
-        match = re.search(pattern, text, re.IGNORECASE)
-    
-        if match:
-            receipt_date = match.group(1)
-            break
+    if receipt_date == "-":
+
+        for pattern in date_patterns:
+        
+            match = re.search(pattern, text, re.IGNORECASE)
+        
+            if match:
+                receipt_date = match.group(1)
+                break
 
     # ==========================
     # SMART TIME DETECTION V2
@@ -231,6 +317,37 @@ def parse_receipt(text):
     # ==========================
     # SMART RECIPIENT DETECTION V2
     # ==========================
+
+    # ==========================
+    # UNIVERSAL LABEL DETECTION V4
+    # ==========================
+    
+    recipient = get_value_after_label(
+        lines,
+        [
+            "Beneficiary Name",
+            "Beneficiary",
+            "Recipient",
+            "Receiver",
+            "Payee",
+            "Penerima",
+            "To"
+        ]
+    )
+    
+    # Validation
+    if recipient:
+    
+        upper = recipient.upper()
+    
+        if (
+            "REFERENCE" in upper
+            or "REFERENCE ID" in upper
+            or "TRANSACTION" in upper
+            or "DATE" in upper
+            or "TIME" in upper
+        ):
+            recipient = "-"
     
     recipient_patterns = [
     
@@ -268,19 +385,21 @@ def parse_receipt(text):
     
     ]
     
-    for pattern in recipient_patterns:
+    if recipient == "-":
 
-        match = re.search(pattern, text, re.IGNORECASE)
+        for pattern in recipient_patterns:
     
-        if match:
-    
-            candidate = match.group(1).strip()
-    
-            if any(word in candidate.upper() for word in recipient_blacklist):
-                continue
-    
-            recipient = candidate
-            break
+            match = re.search(pattern, text, re.IGNORECASE)
+        
+            if match:
+        
+                candidate = match.group(1).strip()
+        
+                if any(word in candidate.upper() for word in recipient_blacklist):
+                    continue
+        
+                recipient = candidate
+                break
 
     # ==========================
     # SMART RECIPIENT DETECTION V2
@@ -315,7 +434,44 @@ def parse_receipt(text):
     # ==========================
     # SMART REFERENCE DETECTION V2
     # ==========================
+
+    # ==========================
+    # UNIVERSAL LABEL DETECTION V4
+    # ==========================
     
+    reference = get_value_after_label(
+        lines,
+        [
+            "Reference ID",
+            "Reference No",
+            "Reference",
+            "Receipt Reference",
+            "Transaction ID",
+            "Payment ID",
+            "Order ID",
+            "FPX Ref",
+            "DuitNow Ref"
+        ]
+    )
+    
+    # Validation
+    if reference:
+    
+        upper = reference.upper()
+    
+        invalid_values = [
+            "ID",
+            "REFERENCE",
+            "REFERENCE ID",
+            "REFERENCE NO",
+            "TRANSACTION",
+            "PAYMENT",
+            "ORDER"
+        ]
+    
+        if upper in invalid_values:
+            reference = "-"
+
     reference_patterns = [
     
         r"Reference\s*No\.?\s*[:\-]?\s*([A-Za-z0-9\-]+)",
@@ -342,15 +498,17 @@ def parse_receipt(text):
     
     ]
     
-    for pattern in reference_patterns:
+    if reference == "-":
+
+        for pattern in reference_patterns:
     
-        match = re.search(pattern, text, re.IGNORECASE)
-    
-        if match:
-    
-            reference = match.group(1).strip()
-    
-            break
+            match = re.search(pattern, text, re.IGNORECASE)
+        
+            if match:
+        
+                reference = match.group(1).strip()
+        
+                break
 
     # ==========================
     # SMART AMOUNT DETECTION V2
