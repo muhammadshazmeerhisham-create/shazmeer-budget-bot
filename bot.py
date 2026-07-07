@@ -89,45 +89,89 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Photo received | User ID : {update.effective_user.id}"
         )
 
-        print("PHOTO FUNCTION CALLED")
+        if not update.message.photo:
+            return
 
-    if not update.message.photo:
-        return
+        file = await update.message.photo[-1].get_file()
 
-    file = await update.message.photo[-1].get_file()
+        filename = f"receipt_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
 
-    filename = f"receipt_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+        await file.download_to_drive(filename)
 
-    await file.download_to_drive(filename)
+        with open(filename, "rb") as f:
 
-    with open(filename, "rb") as f:
+            response = requests.post(
+                "https://api.ocr.space/parse/image",
+                files={"filename": f},
+                data={
+                    "apikey": OCR_API_KEY,
+                    "language": "eng"
+                }
+            )
 
-        response = requests.post(
-            "https://api.ocr.space/parse/image",
-            files={"filename": f},
-            data={
-                "apikey": OCR_API_KEY,
-                "language": "eng"
-            }
+        result = response.json()
+
+        logger.info("OCR API Success")
+
+        text = ""
+
+        if result.get("ParsedResults"):
+            text = result["ParsedResults"][0]["ParsedText"]
+
+        result = parse_receipt(text)
+
+        merchant = result["merchant"]
+        recipient = result["recipient"]
+        amount = result["amount"]
+        category = result["category"]
+        receipt_date = result["receipt_date"]
+        receipt_time = result["receipt_time"]
+        reference = result["reference"]
+
+        cursor.execute(
+            """
+            INSERT INTO expenses
+            (date, merchant, amount, category, note)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                merchant,
+                amount,
+                category,
+                ""
+            )
         )
 
-    result = response.json()
+        conn.commit()
 
-    logger.info("OCR API Success")
+        logger.info(
+            f"Database Saved | Merchant={merchant} | Amount={amount}"
+        )
 
-    print("========== OCR DEBUG ==========")
-    print("Status Code:", response.status_code)
-    print(result)
-    print("===============================")
+        await update.message.reply_text(
+            f"""✅ Resit Berjaya Disimpan
 
-    text = ""
+🏪 Kedai      : {merchant}
+👤 Penerima   : {recipient}
+💰 Jumlah     : RM{amount:.2f}
+📂 Kategori   : {category}
+📅 Tarikh     : {receipt_date}
+🕒 Masa       : {receipt_time}
+🔖 Rujukan    : {reference}
 
-    if result.get("ParsedResults"):
-        text = result["ParsedResults"][0]["ParsedText"]
+💾 Data berjaya direkodkan.
+"""
+        )
 
-    print("===== OCR TEXT =====")
-    print(text)
-    print("====================")
+    except Exception as e:
+
+        logger.exception("Photo Function Error")
+
+        await update.message.reply_text(
+            "❌ Maaf, berlaku ralat semasa memproses resit.\n"
+            "Sila cuba semula sebentar lagi."
+        )
 
 # ==========================
 # SMART AI PARSER V2
