@@ -184,49 +184,6 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 # ==========================
-# SMART AI PARSER V2
-# ==========================
-
-    result = parse_receipt(text)
-
-    merchant = result["merchant"]
-    recipient = result["recipient"]
-    amount = result["amount"]
-    category = result["category"]
-    receipt_date = result["receipt_date"]
-    receipt_time = result["receipt_time"]
-    reference = result["reference"]
-
-    print("========== SAFIA V3 ==========")
-    print("Merchant :", merchant)
-    print("Amount   :", amount)
-    print("Category :", category)
-    print("==============================")
-
-    # Simpan ke database
-    cursor.execute(
-        """ INSERT INTO expenses( date,   merchant, amount, category, note ) VALUES   (?, ?, ?, ?, ?) """,
-            (
-                datetime.now().strftime("%Y-%m-%d  %H:%M:%S"),
-                merchant,
-                amount,
-                category,
-                ""
-            )
-        )
-
-    conn.commit()
-
-    logger.info(
-    f"Database Saved | Merchant={merchant} | Amount={amount}"
-)
-
-    await update.message.reply_text(
-    f"""✅ Resit Berjaya Disimpan
-
-       
-
-# ==========================
 # SENARAI BELANJA
 # ==========================
 
