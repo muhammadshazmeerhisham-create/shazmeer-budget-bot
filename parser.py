@@ -250,31 +250,31 @@ def parse_receipt(text):
 # UNIVERSAL MERCHANT LABEL V4
 # ==========================
 
-merchant_from_label = get_value_after_label(
-    lines,
-    UNIVERSAL_LABELS["merchant"]
-)
-
-if merchant_from_label:
-
-    merchant = merchant_from_label.strip()
-
-    category = "Lain-lain"
+    merchant_from_label = get_value_after_label(
+        lines,
+        UNIVERSAL_LABELS["merchant"]
+    )
     
-    # Merchant
-    if merchant == "Tidak Dikenal":
+    if merchant_from_label:
     
-        for line in lines[:15]:
-            upper = line.upper()
+        merchant = merchant_from_label.strip()
     
-            for key, value in MERCHANT_DB.items():
-                if key in upper:
-                    merchant = value["name"]
-                    category = value["category"]
+        category = "Lain-lain"
+        
+        # Merchant
+        if merchant == "Tidak Dikenal":
+        
+            for line in lines[:15]:
+                upper = line.upper()
+        
+                for key, value in MERCHANT_DB.items():
+                    if key in upper:
+                        merchant = value["name"]
+                        category = value["category"]
+                        break
+        
+                if merchant != "Tidak Dikenal":
                     break
-    
-            if merchant != "Tidak Dikenal":
-                break
             
     # Custom Merchant Database
     if merchant == "Tidak Dikenal":
@@ -398,10 +398,6 @@ if merchant_from_label:
     # SMART DATE DETECTION V2
     # ==========================
 
-    # ==========================
-    # UNIVERSAL LABEL DETECTION V4
-    # ==========================
-    
     # ==========================
     # UNIVERSAL LABEL DETECTION V4
     # ==========================
