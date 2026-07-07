@@ -224,28 +224,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
     f"""✅ Resit Berjaya Disimpan
 
-        except Exception as e:
-
-        logger.exception("Photo Function Error")
-
-        await update.message.reply_text(
-            "❌ Maaf, berlaku ralat semasa memproses resit.\n"
-            "Sila cuba semula sebentar lagi."
-        )
-
-
-🏪 Kedai      : {merchant}
-👤 Penerima   : {recipient}
-💰 Jumlah     : RM{amount:.2f}
-📂 Kategori   : {category}
-📅 Tarikh     : {receipt_date}
-🕒 Masa       : {receipt_time}
-🔖 Rujukan    : {reference}
-
-💾 Data berjaya direkodkan.
-"""
-)
-
+       
 
 # ==========================
 # SENARAI BELANJA
