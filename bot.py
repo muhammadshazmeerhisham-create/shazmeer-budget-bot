@@ -54,11 +54,13 @@ from parser import parse_receipt
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    logger.info(
-    f"/start | User ID : {update.effective_user.id}"
-)
+    try:
 
-    keyboard = [
+        logger.info(
+            f"/start | User ID : {update.effective_user.id}"
+        )
+
+        keyboard = [
         ["📷 Scan Resit"],
         ["📒 Senarai", "📊 Dashboard"],
         ["💰 Gaji 28hb", "💸 Gaji 7hb"],
@@ -77,6 +79,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Sila pilih menu di bawah 👇",
         reply_markup=reply_markup
     )
+    
+    except Exception:
+
+        logger.exception("Start Function Error")
+
+        await update.message.reply_text(
+            "⚠️ Ralat semasa membuka menu utama."
+        )
+
 # ==========================
 # OCR SCAN RESIT
 # ==========================
@@ -106,9 +117,9 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 data={
                     "apikey": OCR_API_KEY,
                     "language": "eng"
-                }
+                },
+                timeout=30
             )
-
         result = response.json()
 
         logger.info("OCR API Success")
@@ -289,11 +300,13 @@ async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    logger.info(
-    f"Button : {update.message.text}"
-)
+    try:
 
-    text = update.message.text
+        logger.info(
+            f"Button : {update.message.text}"
+        )
+
+        text = update.message.text
 
     if text == "📒 Senarai":
         await list_expenses(update, context)
@@ -312,6 +325,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Sila gunakan menu yang disediakan."
     )
+    
+    except Exception:
+
+logger.exception("Button Function Error")
+
+await update.message.reply_text(
+    "⚠️ Ralat semasa memproses menu. Sila cuba semula."
+)
 
 # ==========================
 # GLOBAL ERROR HANDLER
