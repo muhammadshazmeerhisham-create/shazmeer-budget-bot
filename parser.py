@@ -16,7 +16,148 @@ def load_custom_merchants():
 # UNIVERSAL LABEL DETECTION ENGINE V1
 # ==========================
 
+# ==========================
+# UNIVERSAL LABEL DATABASE V1
+# ==========================
+
+UNIVERSAL_LABELS = {
+
+    "merchant": [
+
+        "Merchant Name",
+        "Merchant",
+        "Store Name",
+        "Business Name",
+        "Shop Name",
+        "Seller",
+        "Outlet",
+    ],
+
+    "recipient": [
+
+        "Beneficiary",
+        "Beneficiary Name",
+        "Recipient",
+        "Receiver",
+        "Payee",
+        "To",
+        "Penerima",
+    ],
+
+    "reference": [
+
+        "Reference",
+        "Reference ID",
+        "Reference No",
+        "Receipt Reference",
+        "Transaction ID",
+        "Payment ID",
+        "Order ID",
+        "FPX Ref",
+        "DuitNow Ref",
+    ],
+
+    "date": [
+
+        "Date",
+        "Transaction Date",
+        "Payment Date",
+        "Transfer Date",
+        "Tarikh",
+        "Tarikh Transaksi",
+    ],
+
+    "time": [
+
+        "Time",
+        "Transaction Time",
+        "Payment Time",
+        "Transfer Time",
+        "Masa",
+    ]
+}
+
+# ==========================
+# UNIVERSAL DATE PATTERNS V1
+# ==========================
+
+UNIVERSAL_DATE_PATTERNS = [
+
+    r"(\d{4}-\d{2}-\d{2})",
+
+    r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
+
+    r"(\d{1,2}\s(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s\d{2,4})",
+
+    r"(\d{1,2}\s(?:January|February|March|April|May|June|July|August|September|October|November|December)\s\d{2,4})",
+
+    r"(\d{1,2}\s(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s\d{2,4},\s*\d{1,2}:\d{2}\s?(?:AM|PM))",
+
+    r"(\d{1,2}\s(?:January|February|March|April|May|June|July|August|September|October|November|December)\s\d{2,4},\s*\d{1,2}:\d{2}\s?(?:AM|PM))",
+]
+
 def get_value_after_label(lines, labels):
+
+# ==========================
+# UNIVERSAL TRANSACTION TYPE
+# ==========================
+
+def detect_transaction_type(text):
+
+    upper = text.upper()
+
+    if (
+        "SCAN & PAY" in upper
+        or "DUITNOW QR" in upper
+        or "QR PAYMENT" in upper
+        or "MERCHANT NAME" in upper
+    ):
+        return "QR_PAYMENT"
+
+    if (
+        "BENEFICIARY" in upper
+        or "TRANSFER SUCCESSFUL" in upper
+        or "TRANSFER DETAILS" in upper
+    ):
+        return "BANK_TRANSFER"
+
+    if (
+        "TAX INVOICE" in upper
+        or "RECEIPT" in upper
+        or "CHANGE" in upper
+        or "CASH" in upper
+    ):
+        return "RETAIL_RECEIPT"
+
+    if (
+        "TOUCH 'N GO" in upper
+        or "TNG EWALLET" in upper
+        or "BOOST" in upper
+        or "GRABPAY" in upper
+        or "SHOPEEPAY" in upper
+    ):
+        return "E_WALLET"
+
+    if (
+        "SHOPEE" in upper
+        or "LAZADA" in upper
+    ):
+        return "MARKETPLACE"
+
+    return "UNKNOWN"
+
+    # ==========================
+    # UNIVERSAL DETECTION ENGINE V1
+    # ==========================
+    
+    def detect_by_label(lines, labels):
+    
+        value = get_value_after_label(lines, labels)
+    
+        if value:
+            return value.strip()
+    
+        return "-"
 
     """
     Cari nilai selepas sesuatu label.
@@ -55,6 +196,59 @@ def get_value_after_label(lines, labels):
     return None
 
 # ==========================
+# UNIVERSAL TRANSACTION TYPE V1
+# ==========================
+
+def detect_transaction_type(text):
+
+    upper = text.upper()
+
+    # QR Payment
+    if (
+        "SCAN & PAY" in upper
+        or "DUITNOW QR" in upper
+        or "QR PAYMENT" in upper
+        or "MERCHANT NAME" in upper
+    ):
+        return "QR_PAYMENT"
+
+    # Bank Transfer
+    if (
+        "BENEFICIARY" in upper
+        or "TRANSFER SUCCESSFUL" in upper
+        or "TRANSFER DETAILS" in upper
+    ):
+        return "BANK_TRANSFER"
+
+    # Retail Receipt
+    if (
+        "TAX INVOICE" in upper
+        or "RECEIPT" in upper
+        or "CHANGE" in upper
+        or "CASH" in upper
+    ):
+        return "RETAIL_RECEIPT"
+
+    # E-Wallet
+    if (
+        "TOUCH 'N GO" in upper
+        or "TNG EWALLET" in upper
+        or "BOOST" in upper
+        or "GRABPAY" in upper
+        or "SHOPEEPAY" in upper
+    ):
+        return "E_WALLET"
+
+    # Marketplace
+    if (
+        "SHOPEE" in upper
+        or "LAZADA" in upper
+    ):
+        return "MARKETPLACE"
+
+    return "UNKNOWN"
+
+# ==========================
 # UNIVERSAL VALIDATION ENGINE V1
 # ==========================
 
@@ -68,6 +262,8 @@ def is_invalid_value(value, invalid_words):
     return upper in [word.upper() for word in invalid_words]
 
 def parse_receipt(text):
+
+    transaction_type = detect_transaction_type(text)
 
     merchant = "Tidak Dikenal"
     amount = 0.0
@@ -94,10 +290,29 @@ def parse_receipt(text):
 
     lines = [x.strip() for x in text.splitlines() if x.strip()]
 
+    transaction_type = detect_transaction_type(text)
+
     custom_db = load_custom_merchants()
 
+# ==========================
+# UNIVERSAL MERCHANT LABEL V4
+# ==========================
+
+merchant_from_label = get_value_after_label(
+    lines,
+    UNIVERSAL_LABELS["merchant"]
+)
+
+if merchant_from_label:
+
+    merchant = merchant_from_label.strip()
+
+    category = "Lain-lain"
+    
     # Merchant
-    for line in lines[:15]:
+    if merchant == "Tidak Dikenal":
+    
+        for line in lines[:15]:
         upper = line.upper()
 
         for key, value in MERCHANT_DB.items():
@@ -262,6 +477,8 @@ def parse_receipt(text):
             receipt_date = "-"
     
     date_patterns = [
+    ...
+    ]
     
         r"(\d{4}-\d{2}-\d{2})",
     
@@ -348,6 +565,20 @@ def parse_receipt(text):
             or "TIME" in upper
         ):
             recipient = "-"
+    # ==========================
+    # QR PAYMENT RECIPIENT V4
+    # ==========================
+    
+    if recipient == "-":
+    
+        qr_recipient = get_value_after_label(
+            lines,
+            UNIVERSAL_LABELS["merchant"]
+        )
+    
+        if qr_recipient:
+    
+            recipient = qr_recipient.strip()
     
     recipient_patterns = [
     
