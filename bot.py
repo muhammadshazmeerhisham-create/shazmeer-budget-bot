@@ -297,15 +297,11 @@ async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # BUTTON MENU
 # ==========================
 
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+except Exception:
 
-    try:
+    logger.exception(...)
 
-        logger.info(
-            f"Button : {update.message.text}"
-        )
-
-        text = update.message.text
+    await update.message.reply_text(...)
 
     if text == "📒 Senarai":
         await list_expenses(update, context)
