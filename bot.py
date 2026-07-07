@@ -259,6 +259,26 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ==========================
+# GLOBAL ERROR HANDLER
+# ==========================
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+
+    logger.exception("🚨 Unhandled Exception", exc_info=context.error)
+
+    if update and hasattr(update, "effective_message"):
+
+        try:
+            await update.effective_message.reply_text(
+                "⚠️ Maaf, berlaku ralat semasa memproses permintaan anda.\n\n"
+                "Sila cuba semula sebentar lagi."
+            )
+
+        except Exception:
+            pass
+
+
+# ==========================
 # TELEGRAM BOT
 # ==========================
 
@@ -278,6 +298,8 @@ app.add_handler(
         button
     )
 )
+
+app.add_error_handler(error_handler)
 
 # ==========================
 # WEB SERVER (RENDER)
