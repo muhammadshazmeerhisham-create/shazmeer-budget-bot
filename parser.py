@@ -96,8 +96,6 @@ UNIVERSAL_DATE_PATTERNS = [
     r"(\d{1,2}\s(?:January|February|March|April|May|June|July|August|September|October|November|December)\s\d{2,4},\s*\d{1,2}:\d{2}\s?(?:AM|PM))",
 ]
 
-def get_value_after_label(lines, labels):
-
 # ==========================
 # UNIVERSAL DETECTION ENGINE V1
 # ==========================
