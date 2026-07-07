@@ -265,16 +265,16 @@ if merchant_from_label:
     if merchant == "Tidak Dikenal":
     
         for line in lines[:15]:
-        upper = line.upper()
-
-        for key, value in MERCHANT_DB.items():
-            if key in upper:
-                merchant = value["name"]
-                category = value["category"]
+            upper = line.upper()
+    
+            for key, value in MERCHANT_DB.items():
+                if key in upper:
+                    merchant = value["name"]
+                    category = value["category"]
+                    break
+    
+            if merchant != "Tidak Dikenal":
                 break
-
-        if merchant != "Tidak Dikenal":
-            break
             
     # Custom Merchant Database
     if merchant == "Tidak Dikenal":
