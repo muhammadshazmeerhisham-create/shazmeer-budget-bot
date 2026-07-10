@@ -20,7 +20,17 @@ BANK_DB = {
         "category": "E-Wallet"
     },
 
+    "TOUCH N GO": {
+        "name": "TNG eWallet",
+        "category": "E-Wallet"
+    },
+
     "TNG EWALLET": {
+        "name": "TNG eWallet",
+        "category": "E-Wallet"
+    },
+
+    "TNG E-WALLET": {
         "name": "TNG eWallet",
         "category": "E-Wallet"
     },

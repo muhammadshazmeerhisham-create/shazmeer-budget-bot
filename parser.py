@@ -51,6 +51,9 @@ UNIVERSAL_LABELS = {
         "Reference No",
         "Receipt Reference",
         "Transaction ID",
+        "Transaction No",
+        "Transaction No.",
+        "Transaction Number",
         "Payment ID",
         "Order ID",
         "FPX Ref",
@@ -63,6 +66,8 @@ UNIVERSAL_LABELS = {
         "Transaction Date",
         "Payment Date",
         "Transfer Date",
+        "Date & Time",
+        "Transaction Date & Time",
         "Tarikh",
         "Tarikh Transaksi",
     ],
@@ -200,6 +205,19 @@ def detect_transaction_type(text):
 
     return "UNKNOWN"
 
+
+def is_touch_n_go_receipt(text):
+    """Return True for common Touch 'n Go eWallet OCR spellings."""
+
+    upper = text.upper()
+
+    return any(marker in upper for marker in [
+        "TOUCH 'N GO",
+        "TOUCH N GO",
+        "TNG EWALLET",
+        "TNG E-WALLET",
+    ])
+
 # ==========================
 # UNIVERSAL VALIDATION ENGINE V1
 # ==========================
@@ -212,6 +230,95 @@ def is_invalid_value(value, invalid_words):
     upper = value.upper().strip()
 
     return upper in [word.upper() for word in invalid_words]
+
+
+def is_person_name(name):
+
+    
+
+    if not name:
+        return False
+
+    upper = name.upper()
+
+    person_keywords = [
+        " BIN ",
+        " BINTI ",
+        " A/L ",
+        " A/P "
+    ]
+
+    company_keywords = [
+        "SDN",
+        "BHD",
+        "ENTERPRISE",
+        "TRADING",
+        "STORE",
+        "MART",
+        "CAFE",
+        "RESTAURANT",
+        "RESTORAN",
+        "HOTEL",
+        "PHARMACY",
+        "DIY",
+        "7-ELEVEN",
+        "TEALIVE",
+        "LOTUS"
+    ]
+
+    for keyword in company_keywords:
+        if keyword in upper:
+            return False
+
+    for keyword in person_keywords:
+        if keyword in upper:
+            return True
+
+    return False
+
+    if not value:
+        return True
+
+    upper = value.upper().strip()
+
+    return upper in [word.upper() for word in invalid_words]
+
+# ==========================
+# BANK TRANSFER PARSER V1
+# ==========================
+
+def parse_bank_transfer(lines):
+
+    receipt_date = "-"
+    receipt_time = "-"
+    confidence = 100
+
+    recipient = get_value_after_label(
+        
+        lines,
+        UNIVERSAL_LABELS["merchant"]
+    )
+
+    reference = get_value_after_label(
+        lines,
+        UNIVERSAL_LABELS["reference"]
+    )
+
+    amount = get_value_after_label(
+        lines,
+        UNIVERSAL_LABELS["amount"]
+    )
+
+    return {
+    "merchant": "Maybank Transfer",
+    "recipient": recipient if recipient else "-",
+    "amount": amount,
+    "category": "Transfer",
+    "receipt_date": receipt_date,
+    "receipt_time": receipt_time,
+    "reference": reference,
+    "confidence": confidence,
+    }
 
 def parse_receipt(text):
 
@@ -244,7 +351,14 @@ def parse_receipt(text):
 
     transaction_type = detect_transaction_type(text)
 
+    if transaction_type == "BANK_TRANSFER":
+        return parse_bank_transfer(lines)
+
     custom_db = load_custom_merchants()
+
+    # TNG receipts may use a merchant label for the payee.  Keep that
+    # merchant name, but consistently classify the payment method.
+    is_tng_receipt = is_touch_n_go_receipt(text)
 
 # ==========================
 # UNIVERSAL MERCHANT LABEL V4
@@ -256,9 +370,20 @@ def parse_receipt(text):
     )
     
     if merchant_from_label:
-    
+
         merchant = merchant_from_label.strip()
-    
+
+        if is_tng_receipt:
+            category = "E-Wallet"
+
+        if is_person_name(merchant):
+
+            recipient = merchant
+            merchant = "Maybank QR"
+            category = "Transfer"
+
+    else:
+
         category = "Lain-lain"
         
         # Merchant
@@ -409,6 +534,8 @@ def parse_receipt(text):
             "Date",
             "Payment Date",
             "Transfer Date",
+            "Date & Time",
+            "Transaction Date & Time",
             "Tarikh",
             "Tarikh Transaksi"
         ]
@@ -519,7 +646,7 @@ def parse_receipt(text):
     # QR PAYMENT RECIPIENT V4
     # ==========================
     
-    if recipient == "-":
+    if not recipient or recipient == "-":
     
         qr_recipient = get_value_after_label(
             lines,
@@ -566,7 +693,7 @@ def parse_receipt(text):
     
     ]
     
-    if recipient == "-":
+    if not recipient or recipient == "-":
 
         for pattern in recipient_patterns:
     
@@ -628,6 +755,9 @@ def parse_receipt(text):
             "Reference",
             "Receipt Reference",
             "Transaction ID",
+            "Transaction No",
+            "Transaction No.",
+            "Transaction Number",
             "Payment ID",
             "Order ID",
             "FPX Ref",
@@ -666,6 +796,8 @@ def parse_receipt(text):
         r"Payment\s*ID\s*[:\-]?\s*([A-Za-z0-9\-]+)",
     
         r"Transaction\s*ID\s*[:\-]?\s*([A-Za-z0-9\-]+)",
+
+        r"Transaction\s*(?:No\.?|Number)\s*[:\-]?\s*([A-Za-z0-9\-]+)",
     
         r"DuitNow\s*Ref\s*[:\-]?\s*([A-Za-z0-9\-]+)",
     
@@ -679,7 +811,7 @@ def parse_receipt(text):
     
     ]
     
-    if reference == "-":
+    if not reference or reference == "-":
 
         for pattern in reference_patterns:
     
@@ -747,7 +879,14 @@ def parse_receipt(text):
             ]):
                 continue
 
-            nums = re.findall(r"\d+(?:\.\d{1,2})?", line)
+            # Hanya pertimbangkan nilai berbentuk mata wang atau nilai perpuluhan.
+            # Ini mengelakkan nombor telefon, rujukan dan tahun OCR dipilih
+            # sebagai jumlah belanja.
+            nums = re.findall(
+                r"(?:RM\s*)?(\d+\.\d{1,2})\b",
+                line,
+                re.IGNORECASE
+            )
 
             for n in nums:
 

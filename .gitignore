@@ -1,0 +1,22 @@
+# Environment
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Database
+*.db
+
+# Receipt images
+receipt_*.jpg
+receipt_*.png
+
+# Logs
+*.log
+
+# VS Code
+.vscode/
+
+# OCR Cache
+ocr_cache/
