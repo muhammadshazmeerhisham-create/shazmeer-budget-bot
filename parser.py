@@ -320,6 +320,39 @@ def parse_bank_transfer(lines):
     "confidence": confidence,
     }
 
+
+def clean_ocr_text(text):
+    text = text.replace("|", "I")
+    text = text.replace("RM ", "RM")
+    text = text.replace("RM.", "RM")
+    text = text.replace("R M", "RM")
+
+    text = re.sub(r"[ ]{2,}", " ", text)
+    text = re.sub(r"\n{2,}", "\n", text)
+
+    return text.strip()
+
+
+def find_merchant_in_database(lines, database):
+    for line in lines[:15]:
+        upper = line.upper()
+
+        for key, value in database.items():
+            if key in upper:
+                return value["name"], value["category"]
+
+    return None
+
+
+def find_first_pattern(patterns, text):
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+
+        if match:
+            return match
+
+    return None
+
 def parse_receipt(text):
 
     transaction_type = detect_transaction_type(text)
@@ -337,15 +370,7 @@ def parse_receipt(text):
     # OCR CLEANING V2
     # ==========================
     
-    text = text.replace("|", "I")
-    text = text.replace("RM ", "RM")
-    text = text.replace("RM.", "RM")
-    text = text.replace("R M", "RM")
-    
-    text = re.sub(r"[ ]{2,}", " ", text)
-    text = re.sub(r"\n{2,}", "\n", text)
-    
-    text = text.strip()
+    text = clean_ocr_text(text)
 
     lines = [x.strip() for x in text.splitlines() if x.strip()]
 
@@ -388,48 +413,26 @@ def parse_receipt(text):
         
         # Merchant
         if merchant == "Tidak Dikenal":
-        
-            for line in lines[:15]:
-                upper = line.upper()
-        
-                for key, value in MERCHANT_DB.items():
-                    if key in upper:
-                        merchant = value["name"]
-                        category = value["category"]
-                        break
-        
-                if merchant != "Tidak Dikenal":
-                    break
+            database_match = find_merchant_in_database(lines, MERCHANT_DB)
+
+            if database_match:
+                merchant, category = database_match
             
     # Custom Merchant Database
     if merchant == "Tidak Dikenal":
     
-        for line in lines[:15]:
-            upper = line.upper()
-    
-            for key, value in custom_db.items():
-                if key in upper:
-                    merchant = value["name"]
-                    category = value["category"]
-                    break
+        database_match = find_merchant_in_database(lines, custom_db)
 
-            if merchant != "Tidak Dikenal":
-                break
+        if database_match:
+            merchant, category = database_match
 
     # Bank / E-Wallet Detection
     if merchant == "Tidak Dikenal":
 
-        for line in lines[:15]:
-            upper = line.upper()
+        database_match = find_merchant_in_database(lines, BANK_DB)
 
-            for key, value in BANK_DB.items():
-                if key in upper:
-                    merchant = value["name"]
-                    category = value["category"]
-                    break
-
-            if merchant != "Tidak Dikenal":
-                break
+        if database_match:
+            merchant, category = database_match
 
     # Smart Detection
     if merchant == "Tidak Dikenal":
@@ -570,14 +573,10 @@ def parse_receipt(text):
     ]
     
     if receipt_date == "-":
-    
-        for pattern in date_patterns:
-    
-            match = re.search(pattern, text, re.IGNORECASE)
-    
-            if match:
-                receipt_date = match.group(1)
-                break
+        match = find_first_pattern(date_patterns, text)
+
+        if match:
+            receipt_date = match.group(1)
 
     # ==========================
     # SMART TIME DETECTION V2
@@ -593,20 +592,13 @@ def parse_receipt(text):
     
     ]
     
-    for pattern in time_patterns:
-    
-        match = re.search(pattern, text, re.IGNORECASE)
-    
-        if match:
-    
-            receipt_time = match.group(1).upper()
-    
-            receipt_time = receipt_time.replace("AM", " AM")
-            receipt_time = receipt_time.replace("PM", " PM")
-    
-            receipt_time = re.sub(r"\s{2,}", " ", receipt_time)
-    
-            break
+    match = find_first_pattern(time_patterns, text)
+
+    if match:
+        receipt_time = match.group(1).upper()
+        receipt_time = receipt_time.replace("AM", " AM")
+        receipt_time = receipt_time.replace("PM", " PM")
+        receipt_time = re.sub(r"\s{2,}", " ", receipt_time)
 
     # ==========================
     # SMART RECIPIENT DETECTION V2
@@ -812,16 +804,10 @@ def parse_receipt(text):
     ]
     
     if not reference or reference == "-":
+        match = find_first_pattern(reference_patterns, text)
 
-        for pattern in reference_patterns:
-    
-            match = re.search(pattern, text, re.IGNORECASE)
-        
-            if match:
-        
-                reference = match.group(1).strip()
-        
-                break
+        if match:
+            reference = match.group(1).strip()
 
     # ==========================
     # SMART AMOUNT DETECTION V2
@@ -850,13 +836,10 @@ def parse_receipt(text):
     
     ]
     
-    for pattern in patterns:
-    
-        match = re.search(pattern, text, re.IGNORECASE)
-    
-        if match:
-            amount = float(match.group(1))
-            break
+    match = find_first_pattern(patterns, text)
+
+    if match:
+        amount = float(match.group(1))
 
     if amount == 0:
 
