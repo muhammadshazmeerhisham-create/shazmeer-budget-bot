@@ -1,10 +1,14 @@
 import requests
 
 from config import OCR_API_KEY
+from logging_config import get_logger
+
+
+logger = get_logger(__name__)
 
 
 def scan_receipt(filename):
-    print("OCR Module Loaded")
+    logger.info("OCR Module Loaded")
 
     with open(filename, "rb") as f:
         response = requests.post(
@@ -18,18 +22,14 @@ def scan_receipt(filename):
 
     result = response.json()
 
-    print("========== OCR DEBUG ==========")
-    print("Status Code:", response.status_code)
-    print(result)
-    print("===============================")
+    logger.debug("OCR response received | Status Code: %s", response.status_code)
+    logger.debug("OCR response body: %s", result)
 
     text = ""
 
     if result.get("ParsedResults"):
         text = result["ParsedResults"][0]["ParsedText"]
 
-    print("===== OCR TEXT =====")
-    print(repr(text))
-    print("====================")
+    logger.debug("OCR parsed text: %r", text)
 
     return text

@@ -2,7 +2,6 @@ import os
 import threading
 import requests
 import re
-import logging
 
 from bank_db import BANK_DB
 from merchant_db import MERCHANT_DB
@@ -23,17 +22,13 @@ from telegram.ext import (
 # ==========================
 
 from config import BOT_TOKEN, OCR_API_KEY
+from logging_config import get_logger
 
 # ==========================
 # LOGGING SYSTEM
 # ==========================
 
-logging.basicConfig(
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-    level=logging.INFO
-)
-
-logger = logging.getLogger("SAFIA")
+logger = get_logger("SAFIA")
 
 # ==========================
 # DATABASE
@@ -266,7 +261,24 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 
-    logger.exception("🚨 Unhandled Exception", exc_info=context.error)
+    update_id = getattr(update, "update_id", "-")
+    user = getattr(update, "effective_user", None)
+    user_id = getattr(user, "id", "-")
+
+    if getattr(update, "callback_query", None):
+        update_type = "callback_query"
+    elif getattr(update, "message", None):
+        update_type = "photo" if update.message.photo else "message"
+    else:
+        update_type = "unknown"
+
+    logger.exception(
+        "🚨 Unhandled Exception | update_id=%s | user_id=%s | type=%s",
+        update_id,
+        user_id,
+        update_type,
+        exc_info=context.error
+    )
 
     if update and hasattr(update, "effective_message"):
 
