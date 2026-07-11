@@ -5,7 +5,6 @@ import re
 from bank_db import BANK_DB
 from merchant_db import MERCHANT_DB
 from datetime import datetime
-from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
@@ -20,7 +19,8 @@ from telegram.ext import (
 # CONFIG
 # ==========================
 
-from config import BOT_TOKEN
+from config import BOT_TOKEN, OCR_API_KEY
+from health import create_health_server, run_health_server
 from logging_config import get_logger
 
 # ==========================
@@ -290,24 +290,37 @@ app.add_error_handler(error_handler)
 # WEB SERVER (RENDER)
 # ==========================
 
-class Handler(BaseHTTPRequestHandler):
+def is_ready():
+    if not app.running:
+        return False
 
-    def do_GET(self):
+    if not OCR_API_KEY:
+        return False
 
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"SAFIA is running!")
+    get_total_expenses()
+    return True
 
-def run_web():
 
-    port = int(os.environ.get("PORT", 10000))
+def create_configured_health_server():
+    try:
+        port = int(os.environ.get("PORT", "10000"))
+    except (TypeError, ValueError):
+        logger.exception(
+            "Health server startup failed | Invalid PORT"
+        )
+        raise
 
-    server = HTTPServer(
-        ("0.0.0.0", port),
-        Handler
-    )
-
-    server.serve_forever()
+    try:
+        return create_health_server(
+            "0.0.0.0",
+            port,
+            is_ready,
+        )
+    except OSError:
+        logger.exception(
+            "Health server startup failed | Bind error"
+        )
+        raise
 
 # ==========================
 # MAIN
@@ -315,10 +328,14 @@ def run_web():
 
 if __name__ == "__main__":
 
-    threading.Thread(
-        target=run_web,
+    health_server = create_configured_health_server()
+
+    health_thread = threading.Thread(
+        target=run_health_server,
+        args=(health_server,),
         daemon=True
-    ).start()
+    )
+    health_thread.start()
 
     logger.info("🚀 SAFIA Bot Started")
 
