@@ -33,7 +33,14 @@ logger = get_logger("SAFIA")
 # DATABASE
 # ==========================
 
-from database import conn, cursor
+from database import (
+    get_expenses,
+    get_total_expenses,
+    initialize_database,
+    save_expense,
+)
+
+initialize_database()
 
 # ==========================
 # OCR
@@ -114,25 +121,12 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         receipt_time = result["receipt_time"]
         reference = result["reference"]
 
-        cursor.execute(
-            """
-            INSERT INTO expenses
-            (date, merchant, amount, category, note)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                merchant,
-                amount,
-                category,
-                ""
-            )
-        )
-
-        conn.commit()
-
-        logger.info(
-            f"Database Saved | Merchant={merchant} | Amount={amount}"
+        save_expense(
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            merchant,
+            amount,
+            category,
+            "",
         )
 
         await update.message.reply_text(
@@ -165,9 +159,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def list_expenses(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    cursor.execute(""" SELECT date, merchant, amount, category FROM expenses ORDER BY id DESC """)
-
-    rows = cursor.fetchall()
+    rows = get_expenses()
 
     if not rows:
         await update.message.reply_text("📭 Tiada rekod lagi.")
@@ -198,9 +190,7 @@ async def list_expenses(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    cursor.execute(""" SELECT IFNULL(SUM(amount),0) FROM expenses """)
-
-    total = cursor.fetchone()[0]
+    total = get_total_expenses()
 
     await update.message.reply_text(
         f"""📊 SAFIA Dashboard 💰 Jumlah Belanja RM{total:.2f} """
