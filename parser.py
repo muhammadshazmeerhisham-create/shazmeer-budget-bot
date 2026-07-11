@@ -143,6 +143,305 @@ def get_value_after_label(lines, labels):
     return None
 
 
+MAYBANK_SCAN_PAY_INVALID_NAMES = {
+    "NAME",
+    "MERCHANT",
+    "MERCHANT NAME",
+    "MERCHANT ACCOUNT NUMBER",
+    "RECIPIENT",
+    "RECIPIENT NAME",
+    "RECIPIENT ACCOUNT NUMBER",
+    "ACCOUNT NUMBER",
+    "AMOUNT",
+    "REFERENCE",
+    "REFERENCE ID",
+    "SUCCESSFUL",
+}
+
+
+MAYBANK_SCAN_PAY_REFERENCE_SCAN_LIMIT = 4
+
+
+MAYBANK_SCAN_PAY_REFERENCE_LABELS = (
+    "MERCHANT ACCOUNT NUMBER",
+    "RECIPIENT ACCOUNT NUMBER",
+    "REFERENCE ID",
+    "MERCHANT NAME",
+    "RECIPIENT NAME",
+    "ACCOUNT NUMBER",
+    "DATE & TIME",
+    "REFERENCE",
+    "MERCHANT",
+    "RECIPIENT",
+    "SUCCESSFUL",
+    "AMOUNT",
+    "DATE",
+    "TIME",
+    "NAME",
+)
+
+
+MAYBANK_SCAN_PAY_COMPACT_TIME_PATTERN = (
+    r"(?<![A-Za-z0-9])(\d{3,4})\s+(AM|PM)\b"
+)
+
+
+def _is_valid_maybank_scan_pay_name(value):
+    if not value:
+        return False
+
+    candidate = value.strip()
+
+    if not candidate:
+        return False
+
+    normalized_label = re.sub(
+        r"(?:\s*[:\-]\s*)+$",
+        "",
+        candidate,
+    ).strip().upper()
+
+    if normalized_label in MAYBANK_SCAN_PAY_INVALID_NAMES:
+        return False
+
+    if any(
+        re.match(
+            rf"^{re.escape(label)}\s*[:\-]",
+            candidate,
+            re.IGNORECASE,
+        )
+        for label in MAYBANK_SCAN_PAY_INVALID_NAMES
+    ):
+        return False
+
+    known_label_patterns = (
+        r"^(?:(?:MERCHANT|RECIPIENT)\s+)?"
+        r"ACCOUNT NUMBER\s+\d[\d\s\-]*$",
+        r"^AMOUNT\s+(?:RM\s*)?"
+        r"\d+(?:[.,]\d{1,2})?$",
+        r"^REFERENCE(?:\s+ID)?\s+"
+        r"(?=[A-Za-z0-9\-]*\d)[A-Za-z0-9\-]+$",
+    )
+
+    if any(
+        re.match(pattern, candidate, re.IGNORECASE)
+        for pattern in known_label_patterns
+    ):
+        return False
+
+    if re.fullmatch(
+        r"(?:RM\s*)?[\d\s.,/\-]+",
+        candidate,
+        re.IGNORECASE,
+    ):
+        return False
+
+    return True
+
+
+def extract_maybank_scan_pay_name(lines, name_type):
+    full_label = f"{name_type} Name"
+
+    for index, line in enumerate(lines):
+        current = line.strip()
+
+        name_match = re.match(
+            rf"^{re.escape(full_label)}"
+            r"(?:$|(?:\s*[:\-]\s*|\s+)(.*)$)",
+            current,
+            re.IGNORECASE,
+        )
+
+        # Match the full label before checking its split OCR form.
+        if name_match:
+            inline_value = (
+                name_match.group(1) or ""
+            ).strip()
+
+            if _is_valid_maybank_scan_pay_name(
+                inline_value
+            ):
+                return inline_value
+
+            if inline_value:
+                continue
+
+            next_index = index + 1
+
+            while next_index < len(lines):
+                candidate = lines[next_index].strip()
+
+                if candidate:
+                    if _is_valid_maybank_scan_pay_name(
+                        candidate
+                    ):
+                        return candidate
+
+                    break
+
+                next_index += 1
+
+            continue
+
+        if current.upper() != name_type.upper():
+            continue
+
+        next_index = index + 1
+
+        while (
+            next_index < len(lines)
+            and not lines[next_index].strip()
+        ):
+            next_index += 1
+
+        if next_index >= len(lines):
+            continue
+
+        name_label = lines[next_index].strip()
+
+        if not re.fullmatch(
+            r"Name\s*[:\-]?",
+            name_label,
+            re.IGNORECASE,
+        ):
+            continue
+
+        next_index += 1
+
+        while next_index < len(lines):
+            candidate = lines[next_index].strip()
+
+            if not candidate:
+                next_index += 1
+                continue
+
+            if _is_valid_maybank_scan_pay_name(candidate):
+                return candidate
+
+            break
+
+    return None
+
+
+def _is_maybank_scan_pay_reference_label(value):
+    upper = value.strip().upper()
+
+    for label in MAYBANK_SCAN_PAY_REFERENCE_LABELS:
+        if upper == label:
+            return True
+
+        if re.match(
+            rf"^{re.escape(label)}(?:\s*[:\-]\s*|\s+).+$",
+            upper,
+        ):
+            return True
+
+    return False
+
+
+def _looks_like_maybank_scan_pay_date_time(value):
+    date_time_patterns = [
+        *UNIVERSAL_DATE_PATTERNS,
+        r"\b\d{1,2}:\d{2}(?::\d{2})?"
+        r"\s*(?:AM|PM)?\b",
+        MAYBANK_SCAN_PAY_COMPACT_TIME_PATTERN,
+    ]
+
+    return any(
+        re.search(pattern, value, re.IGNORECASE)
+        for pattern in date_time_patterns
+    )
+
+
+def _is_valid_maybank_scan_pay_reference(value):
+    if not value:
+        return False
+
+    candidate = value.strip()
+
+    if not candidate:
+        return False
+
+    if _is_maybank_scan_pay_reference_label(candidate):
+        return False
+
+    if _looks_like_maybank_scan_pay_date_time(candidate):
+        return False
+
+    if not re.fullmatch(r"[A-Za-z0-9\-]+", candidate):
+        return False
+
+    if not re.search(r"[A-Za-z]", candidate):
+        return False
+
+    if not re.search(r"\d", candidate):
+        return False
+
+    return True
+
+
+def extract_maybank_scan_pay_reference(lines):
+    for index, line in enumerate(lines):
+        current = line.strip()
+
+        reference_match = re.match(
+            r"^Reference\s+ID"
+            r"(?:$|(?:\s*[:\-]\s*|\s+)(.*)$)",
+            current,
+            re.IGNORECASE,
+        )
+
+        if not reference_match:
+            continue
+
+        inline_value = (
+            reference_match.group(1) or ""
+        ).strip()
+
+        if _is_valid_maybank_scan_pay_reference(inline_value):
+            return inline_value
+
+        checked_lines = 0
+
+        for following_line in lines[index + 1:]:
+            candidate = following_line.strip()
+
+            if not candidate:
+                continue
+
+            checked_lines += 1
+
+            if checked_lines > MAYBANK_SCAN_PAY_REFERENCE_SCAN_LIMIT:
+                break
+
+            if _is_valid_maybank_scan_pay_reference(candidate):
+                return candidate
+
+    return None
+
+
+def extract_maybank_scan_pay_compact_time(text):
+    for match in re.finditer(
+        MAYBANK_SCAN_PAY_COMPACT_TIME_PATTERN,
+        text,
+        re.IGNORECASE,
+    ):
+        digits = match.group(1)
+        period = match.group(2).upper()
+
+        if len(digits) == 3:
+            hour = int(digits[0])
+        else:
+            hour = int(digits[:2])
+
+        minute = int(digits[-2:])
+
+        if 1 <= hour <= 12 and 0 <= minute <= 59:
+            return f"{hour}:{minute:02d} {period}"
+
+    return None
+
+
 def detect_by_label(lines, labels):
 
     value = get_value_after_label(lines, labels)
@@ -379,6 +678,43 @@ def parse_receipt(text):
     if transaction_type == "BANK_TRANSFER":
         return parse_bank_transfer(lines)
 
+    normalized_upper_text = text.upper()
+
+    is_maybank_scan_pay = (
+        transaction_type == "QR_PAYMENT"
+        and "MAYBANK" in normalized_upper_text
+        and "SCAN & PAY" in normalized_upper_text
+    )
+
+    maybank_scan_pay_merchant_name = None
+    maybank_scan_pay_recipient_name = None
+    maybank_scan_pay_reference = None
+
+    if is_maybank_scan_pay:
+        maybank_scan_pay_merchant_name = (
+            extract_maybank_scan_pay_name(lines, "Merchant")
+        )
+        maybank_scan_pay_recipient_name = (
+            extract_maybank_scan_pay_name(lines, "Recipient")
+        )
+        maybank_scan_pay_reference = (
+            extract_maybank_scan_pay_reference(lines)
+        )
+
+        if (
+            maybank_scan_pay_merchant_name
+            or maybank_scan_pay_recipient_name
+        ):
+            merchant = (
+                maybank_scan_pay_merchant_name
+                or maybank_scan_pay_recipient_name
+            )
+            recipient = (
+                maybank_scan_pay_recipient_name
+                or maybank_scan_pay_merchant_name
+            )
+            category = "QR Payment"
+
     custom_db = load_custom_merchants()
 
     # TNG receipts may use a merchant label for the payee.  Keep that
@@ -572,11 +908,14 @@ def parse_receipt(text):
     
     ]
     
-    if receipt_date == "-":
+    if not receipt_date or receipt_date == "-":
         match = find_first_pattern(date_patterns, text)
 
         if match:
             receipt_date = match.group(1)
+
+    if is_maybank_scan_pay and not receipt_date:
+        receipt_date = "-"
 
     # ==========================
     # SMART TIME DETECTION V2
@@ -599,6 +938,12 @@ def parse_receipt(text):
         receipt_time = receipt_time.replace("AM", " AM")
         receipt_time = receipt_time.replace("PM", " PM")
         receipt_time = re.sub(r"\s{2,}", " ", receipt_time)
+
+    if is_maybank_scan_pay and receipt_time == "-":
+        compact_time = extract_maybank_scan_pay_compact_time(text)
+
+        if compact_time:
+            receipt_time = compact_time
 
     # ==========================
     # SMART RECIPIENT DETECTION V2
@@ -731,6 +1076,21 @@ def parse_receipt(text):
             recipient = candidate.title()
             break
 
+    # Preserve confirmed Maybank Scan & Pay values after all generic
+    # merchant and recipient fallbacks have completed.
+    if is_maybank_scan_pay:
+        merchant = (
+            maybank_scan_pay_merchant_name
+            or maybank_scan_pay_recipient_name
+            or "Tidak Dikenal"
+        )
+        recipient = (
+            maybank_scan_pay_recipient_name
+            or maybank_scan_pay_merchant_name
+            or "-"
+        )
+        category = "QR Payment"
+
     # ==========================
     # SMART REFERENCE DETECTION V2
     # ==========================
@@ -808,6 +1168,9 @@ def parse_receipt(text):
 
         if match:
             reference = match.group(1).strip()
+
+    if is_maybank_scan_pay:
+        reference = maybank_scan_pay_reference or "-"
 
     # ==========================
     # SMART AMOUNT DETECTION V2
