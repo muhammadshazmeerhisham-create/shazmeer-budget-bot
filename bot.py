@@ -1,6 +1,5 @@
 import os
 import threading
-import requests
 import re
 
 from bank_db import BANK_DB
@@ -21,7 +20,7 @@ from telegram.ext import (
 # CONFIG
 # ==========================
 
-from config import BOT_TOKEN, OCR_API_KEY
+from config import BOT_TOKEN
 from logging_config import get_logger
 
 # ==========================
@@ -103,25 +102,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await file.download_to_drive(filename)
 
-        with open(filename, "rb") as f:
-
-            response = requests.post(
-                "https://api.ocr.space/parse/image",
-                files={"filename": f},
-                data={
-                    "apikey": OCR_API_KEY,
-                    "language": "eng"
-                },
-                timeout=30
-            )
-        result = response.json()
-
-        logger.info("OCR API Success")
-
-        text = ""
-
-        if result.get("ParsedResults"):
-            text = result["ParsedResults"][0]["ParsedText"]
+        text = scan_receipt(filename)
 
         result = parse_receipt(text)
 
