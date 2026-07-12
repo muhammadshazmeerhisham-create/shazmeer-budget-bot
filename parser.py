@@ -473,6 +473,7 @@ def detect_transaction_type(text):
         "BENEFICIARY" in upper
         or "TRANSFER SUCCESSFUL" in upper
         or "TRANSFER DETAILS" in upper
+        or "THIRD PARTY TRANSFER" in upper
     ):
         return "BANK_TRANSFER"
 
@@ -586,37 +587,775 @@ def is_person_name(name):
 # BANK TRANSFER PARSER V1
 # ==========================
 
-def parse_bank_transfer(lines):
+BANK_TRANSFER_ISSUER_ALIASES = (
+    ("MAYBANK2U", "Maybank Transfer"),
+    ("CIMB CLICKS", "CIMB Transfer"),
+    ("MAYBANK", "Maybank Transfer"),
+    ("AM BANK", "AmBank Transfer"),
+    ("AMBANK", "AmBank Transfer"),
+    ("GX BANK", "GXBank Transfer"),
+    ("GXBANK", "GXBank Transfer"),
+    ("CIMB", "CIMB Transfer"),
+)
 
-    receipt_date = "-"
-    receipt_time = "-"
+
+BANK_TRANSFER_RECIPIENT_LABELS = (
+    ("Beneficiary Name", True, False),
+    ("Recipient Name", True, False),
+    ("Beneficiary", True, True),
+    ("Recipient", True, True),
+    ("Payee", True, False),
+    ("Receiver", True, False),
+    ("To", True, False),
+)
+
+
+BANK_TRANSFER_GENERIC_RECIPIENT_LABELS = (
+    "Beneficiary",
+    "Recipient",
+    "Payee",
+    "Receiver",
+    "To",
+)
+
+
+BANK_TRANSFER_SPECIFIC_RECIPIENT_FIELD_LABELS = tuple(
+    f"{label} {field}"
+    for label in BANK_TRANSFER_GENERIC_RECIPIENT_LABELS
+    for field in ("Name", "Bank", "Account Number", "Reference")
+) + (
+    "Merchant Name",
+)
+
+
+BANK_TRANSFER_REFERENCE_LABELS = (
+    "Transaction Reference",
+    "Transaction ID",
+    "Transaction Number",
+    "Transaction No.",
+    "Transaction No",
+    "Transfer Reference",
+    "DuitNow Ref",
+    "FPX Ref",
+    "Reference ID",
+    "Reference No",
+    "Reference",
+)
+
+
+BANK_TRANSFER_AMOUNT_LABELS = (
+    "Transfer Amount",
+    "Amount Paid",
+    "Amount",
+)
+
+
+BANK_TRANSFER_COMBINED_DATETIME_LABELS = (
+    "Transaction Date & Time",
+    "Transfer Date & Time",
+    "Date & Time",
+)
+
+
+BANK_TRANSFER_DATE_LABELS = (
+    "Transaction Date",
+    "Transfer Date",
+    "Payment Date",
+    "Date",
+)
+
+
+BANK_TRANSFER_TIME_LABELS = (
+    "Transaction Time",
+    "Transfer Time",
+    "Payment Time",
+    "Time",
+)
+
+
+BANK_TRANSFER_INVALID_RECIPIENT_NAMES = {
+    "NAME",
+    "BENEFICIARY",
+    "BENEFICIARY NAME",
+    "BENEFICIARY ACCOUNT NUMBER",
+    "BENEFICIARY BANK",
+    "RECIPIENT",
+    "RECIPIENT NAME",
+    "RECIPIENT REFERENCE",
+    "MERCHANT NAME",
+    "ACCOUNT NUMBER",
+    "AMOUNT",
+    "TRANSFER AMOUNT",
+    "AMOUNT PAID",
+    "SUCCESSFUL",
+    "TRANSACTION REFERENCE",
+    "TRANSACTION ID",
+    "TRANSACTION NUMBER",
+    "TRANSACTION NO",
+    "TRANSACTION NO.",
+    "TRANSFER REFERENCE",
+    "DUITNOW REF",
+    "FPX REF",
+    "REFERENCE",
+    "REFERENCE ID",
+    "REFERENCE NO",
+    "DATE",
+    "DATE & TIME",
+    "TRANSACTION DATE",
+    "TRANSACTION DATE & TIME",
+    "TRANSFER DATE",
+    "TRANSFER DATE & TIME",
+    "TIME",
+    "TRANSACTION TIME",
+    "TRANSFER TIME",
+    "PAYEE",
+    "RECEIVER",
+    "TO",
+} | {
+    label.upper()
+    for label in BANK_TRANSFER_SPECIFIC_RECIPIENT_FIELD_LABELS
+}
+
+
+BANK_TRANSFER_FIELD_LABELS = tuple(
+    dict.fromkeys(
+        [
+            *BANK_TRANSFER_SPECIFIC_RECIPIENT_FIELD_LABELS,
+            "Beneficiary Name",
+            "Beneficiary",
+            "Beneficiary Account Number",
+            "Beneficiary Bank",
+            "Recipient Name",
+            "Recipient",
+            "Recipient Reference",
+            "Recipient Account Number",
+            "Recipient Bank",
+            "Payee",
+            "Receiver",
+            "To",
+            "Merchant Name",
+            "Account Number",
+            "Successful",
+            *BANK_TRANSFER_REFERENCE_LABELS,
+            *BANK_TRANSFER_AMOUNT_LABELS,
+            *BANK_TRANSFER_COMBINED_DATETIME_LABELS,
+            *BANK_TRANSFER_DATE_LABELS,
+            *BANK_TRANSFER_TIME_LABELS,
+        ]
+    )
+)
+
+
+def _match_bank_transfer_label(
+    line,
+    label,
+    allow_plain_inline=True,
+):
+    if allow_plain_inline:
+        suffix_pattern = r"(?:(?:\s*[:\-]\s*|\s+)(.*))?"
+    else:
+        suffix_pattern = r"(?:\s*[:\-]\s*(.*))?"
+
+    return re.fullmatch(
+        rf"{re.escape(label)}{suffix_pattern}",
+        line.strip(),
+        re.IGNORECASE,
+    )
+
+
+def _next_bank_transfer_nonempty_index(lines, start_index):
+    next_index = start_index
+
+    while next_index < len(lines):
+        if lines[next_index].strip():
+            return next_index
+
+        next_index += 1
+
+    return None
+
+
+def _iter_bank_transfer_labeled_values(
+    lines,
+    label,
+    allow_plain_inline=True,
+    require_split_name=False,
+    reject_specific_recipient_fields=False,
+    recipient_source_label=None,
+):
+    for index, line in enumerate(lines):
+        match = _match_bank_transfer_label(
+            line,
+            label,
+            allow_plain_inline,
+        )
+
+        if not match:
+            continue
+
+        if (
+            reject_specific_recipient_fields
+            and _is_specific_bank_transfer_recipient_field(line)
+        ):
+            continue
+
+        inline_value = (match.group(1) or "").strip()
+
+        if inline_value:
+            yield inline_value
+            continue
+
+        next_index = _next_bank_transfer_nonempty_index(
+            lines,
+            index + 1,
+        )
+
+        if next_index is None:
+            continue
+
+        if require_split_name:
+            if not re.fullmatch(
+                r"Name\s*[:\-]?",
+                lines[next_index].strip(),
+                re.IGNORECASE,
+            ):
+                continue
+
+            next_index = _next_bank_transfer_nonempty_index(
+                lines,
+                next_index + 1,
+            )
+
+            if next_index is None:
+                continue
+
+        candidate = lines[next_index].strip()
+
+        if (
+            recipient_source_label
+            and _is_bank_transfer_recipient_candidate_field(
+                candidate,
+                recipient_source_label,
+            )
+        ):
+            continue
+
+        if candidate:
+            yield candidate
+
+
+def _is_bank_transfer_field_line(value):
+    candidate = value.strip()
+
+    if not candidate:
+        return False
+
+    for label in BANK_TRANSFER_FIELD_LABELS:
+        if _match_bank_transfer_label(candidate, label):
+            return True
+
+    return False
+
+
+def _is_specific_bank_transfer_recipient_field(line):
+    return any(
+        _match_bank_transfer_label(line, label)
+        for label in BANK_TRANSFER_SPECIFIC_RECIPIENT_FIELD_LABELS
+    )
+
+
+def _is_exact_bank_transfer_field_label(value):
+    normalized = re.sub(
+        r"(?:\s*[:\-]\s*)+$",
+        "",
+        value,
+    ).strip().upper()
+
+    exact_labels = {
+        label.upper()
+        for label in (
+            *BANK_TRANSFER_FIELD_LABELS,
+            *BANK_TRANSFER_SPECIFIC_RECIPIENT_FIELD_LABELS,
+        )
+    }
+
+    return normalized in exact_labels
+
+
+def _is_clear_bank_transfer_amount_field(value):
+    for label in BANK_TRANSFER_AMOUNT_LABELS:
+        match = _match_bank_transfer_label(value, label)
+
+        if match and _parse_bank_transfer_amount(match.group(1)) is not None:
+            return True
+
+    return False
+
+
+def _is_clear_bank_transfer_reference_field(value):
+    for label in BANK_TRANSFER_REFERENCE_LABELS:
+        match = _match_bank_transfer_label(value, label)
+
+        if not match:
+            continue
+
+        inline_value = (match.group(1) or "").strip()
+
+        if not inline_value:
+            continue
+
+        if label != "Reference":
+            return True
+
+        if (
+            re.fullmatch(r"[A-Za-z0-9\-]+", inline_value)
+            and re.search(r"\d", inline_value)
+        ):
+            return True
+
+    return False
+
+
+def _is_clear_bank_transfer_date_time_field(value):
+    for label in (
+        *BANK_TRANSFER_COMBINED_DATETIME_LABELS,
+        *BANK_TRANSFER_DATE_LABELS,
+        *BANK_TRANSFER_TIME_LABELS,
+    ):
+        match = _match_bank_transfer_label(value, label)
+
+        if not match:
+            continue
+
+        inline_value = (match.group(1) or "").strip()
+
+        if not inline_value:
+            continue
+
+        if (
+            _find_bank_transfer_date(inline_value)
+            or _find_bank_transfer_time(inline_value)
+        ):
+            return True
+
+    return False
+
+
+def _is_lower_priority_bank_transfer_recipient_field(
+    value,
+    source_label,
+):
+    source_index = next(
+        (
+            index
+            for index, (label, _, _) in enumerate(
+                BANK_TRANSFER_RECIPIENT_LABELS
+            )
+            if label == source_label
+        ),
+        None,
+    )
+
+    if source_index is None:
+        return False
+
+    for label, _, _ in BANK_TRANSFER_RECIPIENT_LABELS[
+        source_index + 1:
+    ]:
+        match = _match_bank_transfer_label(value, label)
+
+        if not match or not (match.group(1) or "").strip():
+            continue
+
+        if re.match(
+            rf"^{re.escape(label)}\s*[:\-]",
+            value.strip(),
+            re.IGNORECASE,
+        ):
+            return True
+
+        if label in {"Beneficiary", "Recipient"}:
+            return True
+
+    return False
+
+
+def _is_bank_transfer_recipient_candidate_field(
+    candidate,
+    source_label,
+):
+    if _is_exact_bank_transfer_field_label(candidate):
+        return True
+
+    if _is_specific_bank_transfer_recipient_field(candidate):
+        return True
+
+    if _is_clear_bank_transfer_amount_field(candidate):
+        return True
+
+    if _is_clear_bank_transfer_reference_field(candidate):
+        return True
+
+    if _is_clear_bank_transfer_date_time_field(candidate):
+        return True
+
+    return _is_lower_priority_bank_transfer_recipient_field(
+        candidate,
+        source_label,
+    )
+
+
+def _is_valid_bank_transfer_recipient(value):
+    if not value:
+        return False
+
+    candidate = value.strip()
+
+    if not candidate:
+        return False
+
+    normalized_label = re.sub(
+        r"(?:\s*[:\-]\s*)+$",
+        "",
+        candidate,
+    ).strip().upper()
+
+    if normalized_label in BANK_TRANSFER_INVALID_RECIPIENT_NAMES:
+        return False
+
+    if any(
+        re.match(
+            rf"^{re.escape(label)}\s*[:\-]",
+            candidate,
+            re.IGNORECASE,
+        )
+        for label in BANK_TRANSFER_INVALID_RECIPIENT_NAMES
+    ):
+        return False
+
+    structured_label_patterns = (
+        r"^(?:BENEFICIARY|RECIPIENT|PAYEE|RECEIVER|TO|MERCHANT)"
+        r"\s+NAME"
+        r"(?:\s*[:\-]\s*|\s+).+$",
+        r"^(?:(?:BENEFICIARY|RECIPIENT|PAYEE|RECEIVER|TO)\s+)?"
+        r"ACCOUNT NUMBER(?:\s*[:\-]\s*|\s+).+$",
+        r"^(?:BENEFICIARY|RECIPIENT|PAYEE|RECEIVER|TO)\s+BANK"
+        r"(?:\s*[:\-]\s*|\s+).+$",
+        r"^(?:BENEFICIARY|RECIPIENT|PAYEE|RECEIVER|TO)"
+        r"\s+REFERENCE(?:\s*[:\-]\s*|\s+).+$",
+        r"^(?:TRANSFER AMOUNT|AMOUNT PAID|AMOUNT)"
+        r"(?:\s*[:\-]\s*|\s+)(?:RM|MYR)?\s*"
+        r"\d[\d,]*(?:\.\d{1,2})?$",
+        r"^(?:RECIPIENT REFERENCE|TRANSACTION REFERENCE|"
+        r"TRANSACTION ID|TRANSACTION NUMBER|TRANSACTION NO\.?|"
+        r"TRANSFER REFERENCE|DUITNOW REF|FPX REF|REFERENCE ID|"
+        r"REFERENCE NO)(?:\s*[:\-]\s*|\s+).+$",
+        r"^REFERENCE(?:\s*[:\-]\s*|\s+)"
+        r"(?=[A-Za-z0-9\-]*\d)[A-Za-z0-9\-]+$",
+    )
+
+    if any(
+        re.fullmatch(pattern, candidate, re.IGNORECASE)
+        for pattern in structured_label_patterns
+    ):
+        return False
+
+    if re.fullmatch(r"[\d\s,./\-]+", candidate):
+        return False
+
+    if re.fullmatch(
+        r"(?:RM|MYR)\s*\d[\d,]*(?:\.\d{1,2})?",
+        candidate,
+        re.IGNORECASE,
+    ):
+        return False
+
+    if any(
+        re.fullmatch(pattern, candidate, re.IGNORECASE)
+        for pattern in UNIVERSAL_DATE_PATTERNS
+    ):
+        return False
+
+    if re.fullmatch(
+        r"\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?",
+        candidate,
+        re.IGNORECASE,
+    ):
+        return False
+
+    if (
+        re.fullmatch(r"[A-Za-z0-9\-]+", candidate)
+        and len(re.findall(r"\d", candidate)) >= 4
+    ):
+        return False
+
+    return True
+
+
+def _extract_bank_transfer_recipient(lines):
+    for (
+        label,
+        allow_plain_inline,
+        require_split_name,
+    ) in BANK_TRANSFER_RECIPIENT_LABELS:
+        for candidate in _iter_bank_transfer_labeled_values(
+            lines,
+            label,
+            allow_plain_inline,
+            require_split_name,
+            label in BANK_TRANSFER_GENERIC_RECIPIENT_LABELS,
+            label,
+        ):
+            if (
+                label in {"Beneficiary", "Recipient"}
+                and re.match(
+                    r"^NAME(?:[A-Za-z0-9]|\s*[:\-])",
+                    candidate,
+                    re.IGNORECASE,
+                )
+            ):
+                continue
+
+            if _is_valid_bank_transfer_recipient(candidate):
+                return candidate.strip()
+
+    return "-"
+
+
+def _is_valid_bank_transfer_reference(value):
+    if not value:
+        return False
+
+    candidate = value.strip()
+
+    if not candidate:
+        return False
+
+    normalized_label = re.sub(
+        r"(?:\s*[:\-]\s*)+$",
+        "",
+        candidate,
+    ).strip().upper()
+
+    invalid_values = {
+        "ID",
+        "NO",
+        "NO.",
+        "NUMBER",
+        "RECIPIENT REFERENCE",
+    }
+
+    if normalized_label in invalid_values:
+        return False
+
+    if _is_bank_transfer_field_line(candidate):
+        return False
+
+    if re.fullmatch(
+        r"(?:RM|MYR)\s*\d[\d,]*(?:\.\d{1,2})?",
+        candidate,
+        re.IGNORECASE,
+    ):
+        return False
+
+    if any(
+        re.fullmatch(pattern, candidate, re.IGNORECASE)
+        for pattern in UNIVERSAL_DATE_PATTERNS
+    ):
+        return False
+
+    if re.fullmatch(
+        r"\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?",
+        candidate,
+        re.IGNORECASE,
+    ):
+        return False
+
+    return True
+
+
+def _extract_bank_transfer_reference(lines):
+    for label in BANK_TRANSFER_REFERENCE_LABELS:
+        for candidate in _iter_bank_transfer_labeled_values(
+            lines,
+            label,
+        ):
+            if _is_valid_bank_transfer_reference(candidate):
+                return candidate.strip()
+
+    return "-"
+
+
+def _parse_bank_transfer_amount(value):
+    if not value:
+        return None
+
+    match = re.fullmatch(
+        r"(?:RM|MYR)?\s*"
+        r"((?:\d{1,3}(?:,\d{3})+|\d+)"
+        r"(?:\.\d{1,2})?)",
+        value.strip(),
+        re.IGNORECASE,
+    )
+
+    if not match:
+        return None
+
+    try:
+        return float(match.group(1).replace(",", ""))
+    except ValueError:
+        return None
+
+
+def _extract_bank_transfer_amount(lines):
+    for label in BANK_TRANSFER_AMOUNT_LABELS:
+        for candidate in _iter_bank_transfer_labeled_values(
+            lines,
+            label,
+        ):
+            amount = _parse_bank_transfer_amount(candidate)
+
+            if amount is not None:
+                return amount
+
+    return 0.0
+
+
+def _find_bank_transfer_date(value):
+    for pattern in UNIVERSAL_DATE_PATTERNS[:4]:
+        match = re.search(pattern, value, re.IGNORECASE)
+
+        if match:
+            return match.group(1)
+
+    return None
+
+
+def _find_bank_transfer_time(value):
+    time_patterns = [
+        r"(\d{1,2}:\d{2}:\d{2})",
+        r"(\d{1,2}:\d{2}\s?(?:AM|PM|am|pm))",
+        r"(\d{1,2}:\d{2})",
+    ]
+
+    for pattern in time_patterns:
+        match = re.search(pattern, value, re.IGNORECASE)
+
+        if not match:
+            continue
+
+        receipt_time = match.group(1).upper()
+        receipt_time = receipt_time.replace("AM", " AM")
+        receipt_time = receipt_time.replace("PM", " PM")
+
+        return re.sub(r"\s{2,}", " ", receipt_time)
+
+    return None
+
+
+def _extract_bank_transfer_date_time(lines):
+    receipt_date = None
+    receipt_time = None
+
+    for label in BANK_TRANSFER_COMBINED_DATETIME_LABELS:
+        for candidate in _iter_bank_transfer_labeled_values(
+            lines,
+            label,
+        ):
+            if receipt_date is None:
+                receipt_date = _find_bank_transfer_date(candidate)
+
+            if receipt_time is None:
+                receipt_time = _find_bank_transfer_time(candidate)
+
+            if receipt_date and receipt_time:
+                break
+
+        if receipt_date and receipt_time:
+            break
+
+    if receipt_date is None:
+        for label in BANK_TRANSFER_DATE_LABELS:
+            for candidate in _iter_bank_transfer_labeled_values(
+                lines,
+                label,
+            ):
+                receipt_date = _find_bank_transfer_date(candidate)
+
+                if receipt_date:
+                    break
+
+            if receipt_date:
+                break
+
+    if receipt_time is None:
+        for label in BANK_TRANSFER_TIME_LABELS:
+            for candidate in _iter_bank_transfer_labeled_values(
+                lines,
+                label,
+            ):
+                receipt_time = _find_bank_transfer_time(candidate)
+
+                if receipt_time:
+                    break
+
+            if receipt_time:
+                break
+
+    full_text = "\n".join(lines)
+
+    if receipt_date is None:
+        receipt_date = _find_bank_transfer_date(full_text)
+
+    if receipt_time is None:
+        receipt_time = _find_bank_transfer_time(full_text)
+
+    return receipt_date or "-", receipt_time or "-"
+
+
+def _detect_bank_transfer_issuer(lines):
+    for line in lines[:10]:
+        if _is_bank_transfer_field_line(line):
+            if re.fullmatch(
+                r"Successful\s*[:\-]?",
+                line.strip(),
+                re.IGNORECASE,
+            ):
+                continue
+
+            break
+
+        upper = line.upper()
+
+        for alias, merchant in BANK_TRANSFER_ISSUER_ALIASES:
+            if re.search(
+                rf"(?<![A-Z0-9]){re.escape(alias)}(?![A-Z0-9])",
+                upper,
+            ):
+                return merchant
+
+    return "Bank Transfer"
+
+
+def parse_bank_transfer(lines):
+    merchant = _detect_bank_transfer_issuer(lines)
+    recipient = _extract_bank_transfer_recipient(lines)
+    amount = _extract_bank_transfer_amount(lines)
+    receipt_date, receipt_time = (
+        _extract_bank_transfer_date_time(lines)
+    )
+    reference = _extract_bank_transfer_reference(lines)
     confidence = 100
 
-    recipient = get_value_after_label(
-        
-        lines,
-        UNIVERSAL_LABELS["merchant"]
-    )
-
-    reference = get_value_after_label(
-        lines,
-        UNIVERSAL_LABELS["reference"]
-    )
-
-    amount = get_value_after_label(
-        lines,
-        UNIVERSAL_LABELS["amount"]
-    )
-
     return {
-    "merchant": "Maybank Transfer",
-    "recipient": recipient if recipient else "-",
-    "amount": amount,
-    "category": "Transfer",
-    "receipt_date": receipt_date,
-    "receipt_time": receipt_time,
-    "reference": reference,
-    "confidence": confidence,
+        "merchant": merchant,
+        "recipient": recipient,
+        "amount": amount,
+        "category": "Transfer",
+        "receipt_date": receipt_date,
+        "receipt_time": receipt_time,
+        "reference": reference,
+        "confidence": confidence,
     }
 
 
